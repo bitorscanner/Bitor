@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"orbit/routes"
 	"orbit/services/notification"
 	"orbit/utils/crypto"
 	"os"
@@ -206,6 +205,11 @@ func initializePublicSettings(app *pocketbase.PocketBase) error {
 					Type:     schema.FieldTypeBool,
 					Required: true,
 				},
+				&schema.SchemaField{
+					Name:     "initial_setup_done",
+					Type:     schema.FieldTypeBool,
+					Required: true,
+				},
 			),
 		}
 
@@ -220,13 +224,26 @@ func initializePublicSettings(app *pocketbase.PocketBase) error {
 		// Only create a new record if none exists
 		record = models.NewRecord(collection)
 		record.Set("id", "default")
-		record.Set("setup_completed", false) // Set to false only on first creation
+		record.Set("setup_completed", false)
+		record.Set("initial_setup_done", false)
 
 		if err := app.Dao().SaveRecord(record); err != nil {
 			return fmt.Errorf("failed to create initial public settings: %v", err)
 		}
+
+		// Set default app name only on first initialization
+		settings := app.Settings()
+		settings.Meta.AppName = "Orbit"
+		if err := app.Dao().SaveSettings(settings); err != nil {
+			return fmt.Errorf("failed to set default app name: %v", err)
+		}
+
+		// Mark initial setup as done
+		record.Set("initial_setup_done", true)
+		if err := app.Dao().SaveRecord(record); err != nil {
+			return fmt.Errorf("failed to mark initial setup as done: %v", err)
+		}
 	}
-	// If record exists, don't modify it - let the frontend handle setup_completed
 
 	return nil
 }
@@ -301,12 +318,6 @@ func InitializeApp(app *pocketbase.PocketBase) error {
 }
 
 func Setup(app *pocketbase.PocketBase) error {
-	// Initialize notification service
-	notificationService, err := initNotificationService(app)
-	if err != nil {
-		return fmt.Errorf("failed to initialize notification service: %v", err)
-	}
-
 	// Get the ansible base path from environment or use default
 	if envPath := os.Getenv("ANSIBLE_BASE_PATH"); envPath != "" {
 		// Convert to absolute path if it's not already
@@ -341,11 +352,6 @@ func Setup(app *pocketbase.PocketBase) error {
 			log.Printf("Failed to create ansible base path: %v", err)
 			return err
 		}
-	}
-
-	// Register routes
-	if err := routes.RegisterRoutes(app, ansibleBasePath, notificationService); err != nil {
-		return fmt.Errorf("failed to register routes: %v", err)
 	}
 
 	return nil

@@ -16,15 +16,12 @@ import (
 	"github.com/pocketbase/pocketbase/plugins/migratecmd"
 	"github.com/spf13/cobra"
 
-	"orbit/findings"
 	_ "orbit/migrations" // ensure migrations are registered
 	"orbit/nuclei"
-	"orbit/providers"
 	"orbit/routes"
 	"orbit/scan"
 	"orbit/setup"
 	"orbit/ssh"
-	"orbit/templates"
 	"orbit/terminal"
 	"orbit/utils"
 	"orbit/utils/crypto"
@@ -229,37 +226,15 @@ func main() {
 		// Initialize scan handlers
 		scan.InitHandlers(app, ansibleBasePath)
 
-		// Create a base group for API routes
-		apiGroup := e.Router.Group("")
-
 		// Terminal WebSocket handler
 		log.Printf("Registering terminal route...")
 		e.Router.GET("/api/terminal", terminal.HandleTerminalConnection(app))
 
-		// Register provider routes first
-		log.Printf("Registering provider routes...")
-		providers.RegisterRoutes(app, apiGroup)
-
-		// Register scan routes
-		log.Printf("Registering scan routes...")
-		scan.RegisterRoutes(app, e, ansibleBasePath, notificationService)
-
-		// Register findings routes
-		log.Printf("Registering findings routes...")
-		findings.RegisterRoutes(app, e)
-
-		// Then register other routes
-		if err := routes.RegisterRoutes(app, ansibleBasePath, notificationService); err != nil {
+		// Register all routes through the central route registration
+		if err := routes.RegisterRoutes(app, ansibleBasePath, notificationService, e); err != nil {
 			log.Printf("Failed to register routes: %v", err)
 			return err
 		}
-
-		// Register templates routes
-		templates.RegisterRoutes(app, e)
-
-		// Register version route first
-		log.Printf("Registering version route...")
-		version.RegisterRoutes(e.Router)
 
 		// Serve static files from pb_public directory
 		e.Router.GET("/*", echo.WrapHandler(http.FileServer(http.FS(distDirFS))))

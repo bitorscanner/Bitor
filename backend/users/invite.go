@@ -1,21 +1,23 @@
 package users
 
 import (
-	"github.com/pocketbase/pocketbase/models"
-	"github.com/pocketbase/pocketbase/models/schema"
+	"crypto/rand"
+	"encoding/base64"
+	"fmt"
+	"log"
+	"net/http"
+	"net/mail"
+	"orbit/templates/email"
+	"time"
+
+	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/forms"
+	"github.com/pocketbase/pocketbase/models"
+	"github.com/pocketbase/pocketbase/models/schema"
 	"github.com/pocketbase/pocketbase/tools/mailer"
-	"github.com/labstack/echo/v5"
-	"net/http"
-	"net/mail"
-	"time"
-	"fmt"
-	"crypto/rand"
-	"encoding/base64"
-	"orbit/templates/email"
-	"log"
 )
 
 // generateSecureToken generates a cryptographically secure random token
@@ -86,11 +88,14 @@ func EnsureInvitationsCollection(app *pocketbase.PocketBase) error {
 
 // RegisterRoutes registers the invitation routes
 func RegisterRoutes(app *pocketbase.PocketBase, e *core.ServeEvent) {
+	log.Printf("Registering invitation routes...")
 	// Create a group for the invitation routes
 	invitationsGroup := e.Router.Group("/api/invitations", apis.RequireAdminAuth())
+	log.Printf("Created invitations group with path: /api/invitations")
 
 	// Add the invite endpoint that handles both creation and email sending
 	invitationsGroup.POST("/invite", func(c echo.Context) error {
+		log.Printf("Handling POST /api/invitations/invite request")
 		// Parse request body
 		var data struct {
 			Email string `json:"email"`
@@ -183,9 +188,9 @@ func RegisterRoutes(app *pocketbase.PocketBase, e *core.ServeEvent) {
 	e.Router.POST("/api/invitations/accept", func(c echo.Context) error {
 		// Parse request body
 		var data struct {
-			Token    string `json:"token"`
-			Username string `json:"username"`
-			Password string `json:"password"`
+			Token     string `json:"token"`
+			Username  string `json:"username"`
+			Password  string `json:"password"`
 			FirstName string `json:"first_name"`
 			LastName  string `json:"last_name"`
 		}
@@ -237,7 +242,13 @@ func RegisterRoutes(app *pocketbase.PocketBase, e *core.ServeEvent) {
 			record.Set("group", group)
 		}
 
-		if err := app.Dao().SaveRecord(record); err != nil {
+		// Create the user with the password
+		form := forms.NewRecordUpsert(app, record)
+		form.Password = data.Password
+		form.PasswordConfirm = data.Password
+
+		if err := form.Submit(); err != nil {
+			log.Printf("Error creating user: %v", err)
 			return apis.NewApiError(http.StatusInternalServerError, "Failed to create user", err)
 		}
 
@@ -286,4 +297,4 @@ func RegisterRoutes(app *pocketbase.PocketBase, e *core.ServeEvent) {
 			"email": invitation.GetString("email"),
 		})
 	})
-} 
+}

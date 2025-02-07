@@ -132,51 +132,49 @@ func InitNotificationService(app *pocketbase.PocketBase) (*notification.Notifica
 }
 
 // RegisterRoutes registers all application routes
-func RegisterRoutes(app *pocketbase.PocketBase, ansibleBasePath string, notificationService *notification.NotificationService) error {
+func RegisterRoutes(app *pocketbase.PocketBase, ansibleBasePath string, notificationService *notification.NotificationService, e *core.ServeEvent) error {
 	log.Printf("RegisterRoutes called with ansible base path: %s", ansibleBasePath)
+	log.Printf("Registering all routes...")
 
-	// Register all routes
-	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
-		// Create a base group for API routes
-		apiGroup := e.Router.Group("")
+	// Create a base group for API routes
+	apiGroup := e.Router.Group("")
 
-		providers.RegisterRoutes(app, apiGroup)
-		scan.RegisterRoutes(app, e, ansibleBasePath, notificationService)
-		findings.RegisterRoutes(app, e)
-		templates.RegisterRoutes(app, e)
-		version.RegisterRoutes(e.Router)
-		notifications.RegisterRoutes(app, apiGroup)
-		users.RegisterRoutes(app, e)
+	providers.RegisterRoutes(app, apiGroup)
+	scan.RegisterRoutes(app, e, ansibleBasePath, notificationService)
+	findings.RegisterRoutes(app, e)
+	templates.RegisterRoutes(app, e)
+	version.RegisterRoutes(e.Router)
+	notifications.RegisterRoutes(app, apiGroup)
+	log.Printf("Registering users routes...")
+	users.RegisterRoutes(app, e)
+	log.Printf("Users routes registered")
 
-		// Initialize collections
-		if err := users.EnsureInvitationsCollection(app); err != nil {
-			log.Fatal(err)
-		}
+	// Initialize collections
+	if err := users.EnsureInvitationsCollection(app); err != nil {
+		log.Fatal(err)
+	}
 
-		if err := notifications.EnsureNotificationsCollection(app); err != nil {
-			log.Fatal(err)
-		}
+	if err := notifications.EnsureNotificationsCollection(app); err != nil {
+		log.Fatal(err)
+	}
 
-		// Apply email settings from the database
-		if err := notifications.ApplyEmailSettings(app); err != nil {
-			log.Printf("Failed to apply email settings: %v", err)
-		}
+	// Apply email settings from the database
+	if err := notifications.ApplyEmailSettings(app); err != nil {
+		log.Printf("Failed to apply email settings: %v", err)
+	}
 
-		// Start the scan scheduler with the ansible base path
-		scanScheduler = scheduler.NewScanScheduler(app, ansibleBasePath)
-		log.Printf("Starting scan scheduler with ansible base path: %s", ansibleBasePath)
-		scanScheduler.Start()
-		log.Println("Scan Scheduler started.")
+	// Start the scan scheduler with the ansible base path
+	scanScheduler = scheduler.NewScanScheduler(app, ansibleBasePath)
+	log.Printf("Starting scan scheduler with ansible base path: %s", ansibleBasePath)
+	scanScheduler.Start()
+	log.Println("Scan Scheduler started.")
 
-		// Start the cost calculation scheduler
-		if _, err := scheduler.StartScheduler(app); err != nil {
-			log.Printf("Error starting cost calculation scheduler: %v", err)
-		} else {
-			log.Println("Cost calculation scheduler started.")
-		}
-
-		return nil
-	})
+	// Start the cost calculation scheduler
+	if _, err := scheduler.StartScheduler(app); err != nil {
+		log.Printf("Error starting cost calculation scheduler: %v", err)
+	} else {
+		log.Println("Cost calculation scheduler started.")
+	}
 
 	return nil
 }

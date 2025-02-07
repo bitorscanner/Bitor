@@ -20,6 +20,8 @@
     smtp_username: string;
     smtp_password: string;
     smtp_encryption: string;
+    app_name: string;
+    app_url: string;
   }
 
   let settings: Settings = {
@@ -36,7 +38,9 @@
     smtp_port: 587,
     smtp_username: '',
     smtp_password: '',
-    smtp_encryption: 'tls'
+    smtp_encryption: 'tls',
+    app_name: 'Orbit',
+    app_url: ''
   };
 
   let saveMessage = '';
@@ -87,7 +91,9 @@
               smtp_port: mailSettings.smtp?.port || 587,
               smtp_username: mailSettings.smtp?.username || '',
               smtp_password: '', // Don't load the password for security
-              smtp_encryption: mailSettings.smtp?.tls ? 'tls' : 'none'
+              smtp_encryption: mailSettings.smtp?.tls ? 'tls' : 'none',
+              app_name: mailSettings.meta?.appName || 'Orbit',
+              app_url: mailSettings.meta?.appUrl || ''
             };
           }
         } catch (err) {
@@ -137,7 +143,9 @@
             meta: {
               ...currentSettings.meta,
               senderName: settings.sender_name,
-              senderAddress: settings.sender_address
+              senderAddress: settings.sender_address,
+              appName: settings.app_name,
+              appUrl: settings.app_url
             },
             smtp: {
               enabled: true,
@@ -307,7 +315,7 @@
 
       {#if isSuperAdmin}
         <!-- Email Settings -->
-        <Card class="md:col-span-2 xl:col-span-3">
+        <Card>
           <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Email Settings</h2>
           <div class="space-y-4">
             <div>
@@ -389,6 +397,40 @@
                 <option value="tls">TLS</option>
                 <option value="none">None</option>
               </select>
+            </div>
+          </div>
+        </Card>
+
+        <!-- Application Settings -->
+        <Card>
+          <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Application Settings</h2>
+          <div class="space-y-4">
+            <div>
+              <Label for="app_name" class="mb-2">Application Name</Label>
+              <Input
+                id="app_name"
+                type="text"
+                bind:value={settings.app_name}
+                class="w-full"
+                placeholder="Orbit"
+              />
+              <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                The name of your application (appears in emails and UI)
+              </p>
+            </div>
+
+            <div>
+              <Label for="app_url" class="mb-2">Application URL</Label>
+              <Input
+                id="app_url"
+                type="url"
+                bind:value={settings.app_url}
+                class="w-full"
+                placeholder="https://your-orbit-instance.com"
+              />
+              <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                The base URL of your application (used for email links)
+              </p>
             </div>
           </div>
         </Card>
