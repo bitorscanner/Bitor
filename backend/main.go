@@ -230,6 +230,9 @@ func main() {
 		log.Printf("Registering terminal route...")
 		e.Router.GET("/api/terminal", terminal.HandleTerminalConnection(app))
 
+		// Register version check routes
+		version.RegisterRoutes(e)
+
 		// Register all routes through the central route registration
 		if err := routes.RegisterRoutes(app, ansibleBasePath, notificationService, e); err != nil {
 			log.Printf("Failed to register routes: %v", err)

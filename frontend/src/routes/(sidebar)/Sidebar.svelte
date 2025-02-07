@@ -143,26 +143,22 @@
 		});
 	});
 
-	let version = 'unknown';
+	let version = import.meta.env.DEV ? 'development' : 'unknown';
 
 	onMount(async () => {
-		try {
-			const token = $pocketbase.authStore.token;
-
-			const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/version`, {
-				headers: {
-					Authorization: `Bearer ${token}`,
-				},
-			});
-
-			if (response.ok) {
-				const data = await response.json();
-				version = data.version;
-			} else {
-				console.error('Failed to fetch version');
+		// Only check for version updates in production
+		if (!import.meta.env.DEV) {
+			try {
+				const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/version/check`);
+				if (response.ok) {
+					const data = await response.json();
+					version = data.current_version;
+				} else {
+					console.error('Failed to fetch version');
+				}
+			} catch (error) {
+				console.error('Error fetching version:', error);
 			}
-		} catch (error) {
-			console.error('Error fetching version:', error);
 		}
 	});
 </script>

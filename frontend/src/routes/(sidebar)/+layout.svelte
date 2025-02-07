@@ -22,16 +22,14 @@
 </script>
 
 <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
-	<header
-		class="fixed top-0 z-40 w-full border-b border-gray-200 bg-white dark:border-gray-600 dark:bg-gray-800"
-	>
+	<header class="fixed top-0 z-50 w-full">
 		<Navbar bind:drawerHidden />
 	</header>
 
-	<div class="flex min-h-screen pt-[64px]">
+	<div class="flex pt-16">
 		<Sidebar bind:drawerHidden />
-		<main class="flex-1 lg:ml-64 bg-gray-50 dark:bg-gray-900">
-			<div class="min-h-screen">
+		<main class="relative h-full w-full overflow-y-auto bg-gray-50 dark:bg-gray-900 lg:ml-64">
+			<div class="p-4">
 				<slot />
 			</div>
 		</main>

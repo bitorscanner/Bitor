@@ -143,7 +143,7 @@ func RegisterRoutes(app *pocketbase.PocketBase, ansibleBasePath string, notifica
 	scan.RegisterRoutes(app, e, ansibleBasePath, notificationService)
 	findings.RegisterRoutes(app, e)
 	templates.RegisterRoutes(app, e)
-	version.RegisterRoutes(e.Router)
+	version.RegisterRoutes(e)
 	notifications.RegisterRoutes(app, apiGroup)
 	log.Printf("Registering users routes...")
 	users.RegisterRoutes(app, e)

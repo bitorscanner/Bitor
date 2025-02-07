@@ -4,6 +4,7 @@
   import { pocketbase } from '$lib/stores/pocketbase';
   import { CheckCircleSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
   import { goto } from '$app/navigation';
+  import UpdateNotification from '$lib/components/UpdateNotification.svelte';
 
   interface Settings {
     scan_concurrency: number;
@@ -201,6 +202,8 @@
   {#if loading}
     <p class="text-gray-600 dark:text-gray-400">Loading settings...</p>
   {:else}
+    <UpdateNotification />
+    
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
       <!-- Cost Settings -->
       <Card>
