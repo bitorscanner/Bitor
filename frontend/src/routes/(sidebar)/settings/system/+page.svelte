@@ -135,10 +135,14 @@
       // Save email settings only if super admin
       if (isSuperAdmin) {
         try {
-          // Get current settings to preserve other meta values
           const currentSettings = await $pocketbase.settings.getAll();
           
-          // Only send the SMTP and meta settings update
+          // Convert smtp_port to number
+          const smtpPort = parseInt(settings.smtp_port.toString(), 10);
+          if (isNaN(smtpPort)) {
+            throw new Error('SMTP Port must be a valid number');
+          }
+          
           const updatedSettings = {
             meta: {
               ...currentSettings.meta,
@@ -150,7 +154,7 @@
             smtp: {
               enabled: true,
               host: settings.smtp_host,
-              port: settings.smtp_port,
+              port: smtpPort,
               username: settings.smtp_username,
               tls: settings.smtp_encryption === 'tls',
               ...(settings.smtp_password ? { password: settings.smtp_password } : {})
@@ -159,8 +163,10 @@
 
           console.log('Saving settings:', updatedSettings);
           await $pocketbase.settings.update(updatedSettings);
-        } catch (err) {
-          console.error('Error saving mail settings:', err);
+        } catch (err: any) {
+          console.error('Error saving settings:', err);
+          saveMessage = err?.data?.message || err?.message || 'Error saving settings';
+          isError = true;
           throw err;
         }
       }
