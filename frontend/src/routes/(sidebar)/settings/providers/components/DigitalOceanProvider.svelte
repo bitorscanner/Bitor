@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Label, Input, Select, Alert, Button, Badge } from 'flowbite-svelte';
+    import { Label, Input, Select, Alert, Button, Badge, Spinner } from 'flowbite-svelte';
     import { pocketbase } from '$lib/stores/pocketbase';
     import type { Provider, DigitalOceanSettings } from '../types';
     import { fetchDigitalOceanData } from '../utils/digitalocean';
@@ -12,6 +12,7 @@
     let error = '';
     let success = '';
     let loading = false;
+    let isInitialLoading = false;
     let regions: { id: string; name: string }[] = [];
     let projects: { id: string; name: string }[] = [];
     let sizes: { slug: string; memory: number; vcpus: number; disk: number; transfer: number; price_monthly: number }[] = [];
@@ -98,6 +99,7 @@
     }
 
     async function loadData() {
+        isInitialLoading = true;
         loading = true;
         error = '';
         try {
@@ -109,6 +111,7 @@
 
             if (!hasApiKey) {
                 loading = false;
+                isInitialLoading = false;
                 return;
             }
 
@@ -142,6 +145,7 @@
             error = e.message || 'Failed to load DigitalOcean data';
         } finally {
             loading = false;
+            isInitialLoading = false;
             console.log('Final state:', { hasApiKey, loading, error, regions, projects, sizes, domains });
         }
     }
@@ -253,26 +257,21 @@
         </Alert>
     {/if}
 
-    {#if loading}
-        <p class="text-gray-500">Loading...</p>
-    {:else if !hasApiKey}
-        <div class="flex justify-center mb-4">
-            <Button color="blue" on:click={() => showApiKeyModal = true}>
-                Add API Key
-            </Button>
+    {#if isInitialLoading}
+        <div class="flex flex-col items-center justify-center py-8">
+            <Spinner size="8" />
+            <p class="mt-4 text-gray-600 dark:text-gray-400">Loading DigitalOcean Configuration...</p>
         </div>
     {:else}
-        <div class="flex justify-between items-center mb-4">
-            <div class="flex items-center gap-2">
-                <div class="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span class="text-sm text-gray-600">API Key Configured</span>
-            </div>
-            <Button size="xs" color="blue" on:click={() => showApiKeyModal = true}>
-                Update API Key
+        <div class="flex justify-between items-center">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white">DigitalOcean Configuration</h3>
+            <Button color="blue" on:click={() => (showApiKeyModal = true)}>
+                {hasApiKey ? 'Update API Key' : 'Add API Key'}
             </Button>
         </div>
-        <div class="space-y-4">
-            {#if provider.uses?.includes('compute')}
+
+        {#if hasApiKey}
+            <div class="space-y-4">
                 <div>
                     <Label for="do_region" class="mb-2">
                         Region <span class="text-red-500">*</span>
@@ -361,27 +360,27 @@
                         on:keydown={addTag}
                     />
                 </div>
-            {/if}
 
-            {#if provider.uses?.includes('dns')}
-                <div>
-                    <Label for="dns_domain" class="mb-2">
-                        Domain <span class="text-red-500">*</span>
-                    </Label>
-                    <Select
-                        id="dns_domain"
-                        bind:value={settings.dns_domain}
-                        on:change={saveSettings}
-                        required
-                    >
-                        <option value="">Select a domain</option>
-                        {#each domains as domain}
-                            <option value={domain.name}>{domain.name}</option>
-                        {/each}
-                    </Select>
-                </div>
-            {/if}
-        </div>
+                {#if provider.uses?.includes('dns')}
+                    <div>
+                        <Label for="dns_domain" class="mb-2">
+                            Domain <span class="text-red-500">*</span>
+                        </Label>
+                        <Select
+                            id="dns_domain"
+                            bind:value={settings.dns_domain}
+                            on:change={saveSettings}
+                            required
+                        >
+                            <option value="">Select a domain</option>
+                            {#each domains as domain}
+                                <option value={domain.name}>{domain.name}</option>
+                            {/each}
+                        </Select>
+                    </div>
+                {/if}
+            </div>
+        {/if}
     {/if}
 
     <DigitalOceanAPIKeyModal

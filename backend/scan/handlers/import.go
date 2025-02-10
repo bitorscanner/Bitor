@@ -60,7 +60,9 @@ func HandleImportNucleiScanResults(app *pocketbase.PocketBase) echo.HandlerFunc 
 		// Send success response immediately
 		c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSONCharsetUTF8)
 		c.Response().WriteHeader(http.StatusOK)
-		c.Response().Write([]byte(`{"status": "processing"}`))
+		if _, err := c.Response().Write([]byte(`{"status": "processing"}`)); err != nil {
+			log.Printf("Failed to write response: %v", err)
+		}
 		c.Response().Flush()
 
 		// Process findings in a goroutine

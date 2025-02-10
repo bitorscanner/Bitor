@@ -7,6 +7,8 @@ import (
 	"orbit/findings"
 	"orbit/notifications"
 	"orbit/providers"
+	"orbit/providers/aws"
+	"orbit/providers/digitalocean"
 	"orbit/scan"
 	"orbit/scheduler"
 	"orbit/services/notification"
@@ -36,9 +38,11 @@ func InitNotificationService(app *pocketbase.PocketBase) (*notification.Notifica
 		if emailJson := record.Get("email"); emailJson != nil {
 			emailBytes, err := json.Marshal(emailJson)
 			if err != nil {
+				log.Printf("Failed to marshal email config: %v", err)
 				return nil, fmt.Errorf("failed to marshal email config: %v", err)
 			}
 			if err := json.Unmarshal(emailBytes, &config.Email); err != nil {
+				log.Printf("Failed to unmarshal email config: %v", err)
 				return nil, fmt.Errorf("failed to parse email config: %v", err)
 			}
 		}
@@ -47,9 +51,11 @@ func InitNotificationService(app *pocketbase.PocketBase) (*notification.Notifica
 		if slackJson := record.Get("slack"); slackJson != nil {
 			slackBytes, err := json.Marshal(slackJson)
 			if err != nil {
+				log.Printf("Failed to marshal slack config: %v", err)
 				return nil, fmt.Errorf("failed to marshal slack config: %v", err)
 			}
 			if err := json.Unmarshal(slackBytes, &config.Slack); err != nil {
+				log.Printf("Failed to unmarshal slack config: %v", err)
 				return nil, fmt.Errorf("failed to parse slack config: %v", err)
 			}
 		}
@@ -102,23 +108,33 @@ func InitNotificationService(app *pocketbase.PocketBase) (*notification.Notifica
 
 			if emailJson := e.Record.Get("email"); emailJson != nil {
 				emailBytes, _ := json.Marshal(emailJson)
-				json.Unmarshal(emailBytes, &newConfig.Email)
+				if err := json.Unmarshal(emailBytes, &newConfig.Email); err != nil {
+					log.Printf("Failed to unmarshal email config: %v", err)
+				}
 			}
 			if slackJson := e.Record.Get("slack"); slackJson != nil {
 				slackBytes, _ := json.Marshal(slackJson)
-				json.Unmarshal(slackBytes, &newConfig.Slack)
+				if err := json.Unmarshal(slackBytes, &newConfig.Slack); err != nil {
+					log.Printf("Failed to unmarshal slack config: %v", err)
+				}
 			}
 			if discordJson := e.Record.Get("discord"); discordJson != nil {
 				discordBytes, _ := json.Marshal(discordJson)
-				json.Unmarshal(discordBytes, &newConfig.Discord)
+				if err := json.Unmarshal(discordBytes, &newConfig.Discord); err != nil {
+					log.Printf("Failed to unmarshal discord config: %v", err)
+				}
 			}
 			if telegramJson := e.Record.Get("telegram"); telegramJson != nil {
 				telegramBytes, _ := json.Marshal(telegramJson)
-				json.Unmarshal(telegramBytes, &newConfig.Telegram)
+				if err := json.Unmarshal(telegramBytes, &newConfig.Telegram); err != nil {
+					log.Printf("Failed to unmarshal telegram config: %v", err)
+				}
 			}
 			if rulesJson := e.Record.Get("rules"); rulesJson != nil {
 				rulesBytes, _ := json.Marshal(rulesJson)
-				json.Unmarshal(rulesBytes, &newConfig.Rules)
+				if err := json.Unmarshal(rulesBytes, &newConfig.Rules); err != nil {
+					log.Printf("Failed to unmarshal rules config: %v", err)
+				}
 			}
 
 			if err := notificationService.UpdateConfig(&newConfig); err != nil {
@@ -137,7 +153,7 @@ func RegisterRoutes(app *pocketbase.PocketBase, ansibleBasePath string, notifica
 	log.Printf("Registering all routes...")
 
 	// Create a base group for API routes
-	apiGroup := e.Router.Group("")
+	apiGroup := e.Router.Group("/api")
 
 	providers.RegisterRoutes(app, apiGroup)
 	scan.RegisterRoutes(app, e, ansibleBasePath, notificationService)
@@ -148,6 +164,12 @@ func RegisterRoutes(app *pocketbase.PocketBase, ansibleBasePath string, notifica
 	log.Printf("Registering users routes...")
 	users.RegisterRoutes(app, e)
 	log.Printf("Users routes registered")
+
+	// Register AWS provider routes
+	aws.RegisterRoutes(e, apiGroup)
+
+	// Register DigitalOcean provider routes
+	digitalocean.RegisterRoutes(e, apiGroup)
 
 	// Initialize collections
 	if err := users.EnsureInvitationsCollection(app); err != nil {

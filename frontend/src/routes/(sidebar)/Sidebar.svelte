@@ -143,22 +143,25 @@
 		});
 	});
 
-	let version = import.meta.env.DEV ? 'development' : 'unknown';
+	let version = 'loading...';
 
 	onMount(async () => {
-		// Only check for version updates in production
-		if (!import.meta.env.DEV) {
-			try {
-				const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/version/check`);
-				if (response.ok) {
-					const data = await response.json();
-					version = data.current_version;
-				} else {
-					console.error('Failed to fetch version');
+		try {
+			const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+			const response = await fetch(`${baseUrl}/api/version/check`);
+			if (response.ok) {
+				const data = await response.json();
+				version = data.current_version;
+				if (version === 'v0.0.0') {
+					version = 'development';
 				}
-			} catch (error) {
-				console.error('Error fetching version:', error);
+			} else {
+				version = 'unknown';
+				console.error('Failed to fetch version');
 			}
+		} catch (error) {
+			version = 'unknown';
+			console.error('Error fetching version:', error);
 		}
 	});
 </script>

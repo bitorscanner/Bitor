@@ -13,13 +13,13 @@ import (
 )
 
 type ScanHandler struct {
-	pb                 *pocketbase.PocketBase
+	pb                  *pocketbase.PocketBase
 	notificationService *notification.NotificationService
 }
 
 func NewScanHandler(pb *pocketbase.PocketBase, notificationService *notification.NotificationService) *ScanHandler {
 	return &ScanHandler{
-		pb:                 pb,
+		pb:                  pb,
 		notificationService: notificationService,
 	}
 }
@@ -57,7 +57,7 @@ func (h *ScanHandler) StartScan(c echo.Context) error {
 
 func (h *ScanHandler) StopScan(c echo.Context) error {
 	var req struct {
-			ScanID string `json:"scan_id"`
+		ScanID string `json:"scan_id"`
 	}
 
 	if err := json.NewDecoder(c.Request().Body).Decode(&req); err != nil {
@@ -115,4 +115,4 @@ func (h *ScanHandler) ImportManualScan(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, record)
-} 
+}

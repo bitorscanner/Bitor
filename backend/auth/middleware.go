@@ -85,6 +85,13 @@ func RequireAuthOrAPIKey(app *pocketbase.PocketBase) echo.MiddlewareFunc {
 	}
 }
 
+// isValidAPIKey is a helper function to validate a scan's API key.
+// Currently unused but kept for future use in API key validation.
+// It compares the provided API key against the one stored in the scan record.
+//
+// Note: This function is intentionally unused in the current implementation
+// but is retained for planned future authentication enhancements.
+// nolint:unused
 func isValidAPIKey(app *pocketbase.PocketBase, scanID, apiKey string) bool {
 	record, err := app.Dao().FindRecordById("nuclei_scans", scanID)
 	if err != nil {

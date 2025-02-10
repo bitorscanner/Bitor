@@ -15,6 +15,8 @@ import (
 
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase/models"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // GroupedFindings represents the grouped findings.
@@ -581,7 +583,8 @@ func HandleRecentFindings(app *pocketbase.PocketBase) echo.HandlerFunc {
 		// Group findings by severity
 		groupedFindings := make(map[string][]map[string]interface{})
 		for _, finding := range findings {
-			severity := strings.Title(strings.ToLower(finding.Severity))
+			caser := cases.Title(language.English)
+			severity := caser.String(strings.ToLower(finding.Severity))
 			infoName := finding.InfoName
 
 			groupedFindings[severity] = append(groupedFindings[severity], map[string]interface{}{

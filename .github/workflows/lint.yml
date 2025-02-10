@@ -1,0 +1,73 @@
+name: Lint
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  frontend-lint:
+    name: Frontend Lint
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install pnpm
+      uses: pnpm/action-setup@v2
+      with:
+        version: 8
+        run_install: false
+
+    - name: Install Dependencies
+      run: |
+        cd frontend
+        pnpm install
+
+    - name: Run ESLint
+      run: |
+        cd frontend
+        pnpm run lint
+
+    - name: Check Types
+      run: |
+        cd frontend
+        pnpm run check
+
+  backend-lint:
+    name: Backend Lint
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '>=1.21.0'
+        cache: true
+
+    - name: Install golangci-lint
+      run: |
+        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.55.2
+
+    - name: Run golangci-lint
+      run: |
+        cd backend
+        golangci-lint run --timeout=5m
+
+    - name: Run go vet
+      run: |
+        cd backend
+        go vet ./...
+
+    - name: Run go fmt
+      run: |
+        cd backend
+        go fmt ./...

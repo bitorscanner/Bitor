@@ -69,6 +69,10 @@ type FileData struct {
 	Base64 string `json:"base64"`
 }
 
+// initNotificationService initializes the notification service.
+// Currently unused but retained for future use in notification system setup.
+// It will be used when implementing the notification service integration.
+// nolint:unused
 func initNotificationService(app *pocketbase.PocketBase) (*notification.NotificationService, error) {
 	// Create empty config
 	config := notification.NotificationConfig{}
@@ -159,24 +163,54 @@ func initNotificationService(app *pocketbase.PocketBase) (*notification.Notifica
 			var newConfig notification.NotificationConfig
 
 			if emailJson := e.Record.Get("email"); emailJson != nil {
-				emailBytes, _ := json.Marshal(emailJson)
-				json.Unmarshal(emailBytes, &newConfig.Email)
+				emailBytes, err := json.Marshal(emailJson)
+				if err != nil {
+					log.Printf("Failed to marshal email config: %v", err)
+					return nil
+				}
+				if err := json.Unmarshal(emailBytes, &newConfig.Email); err != nil {
+					log.Printf("Failed to parse email config: %v", err)
+				}
 			}
 			if slackJson := e.Record.Get("slack"); slackJson != nil {
-				slackBytes, _ := json.Marshal(slackJson)
-				json.Unmarshal(slackBytes, &newConfig.Slack)
+				slackBytes, err := json.Marshal(slackJson)
+				if err != nil {
+					log.Printf("Failed to marshal slack config: %v", err)
+					return nil
+				}
+				if err := json.Unmarshal(slackBytes, &newConfig.Slack); err != nil {
+					log.Printf("Failed to parse slack config: %v", err)
+				}
 			}
 			if discordJson := e.Record.Get("discord"); discordJson != nil {
-				discordBytes, _ := json.Marshal(discordJson)
-				json.Unmarshal(discordBytes, &newConfig.Discord)
+				discordBytes, err := json.Marshal(discordJson)
+				if err != nil {
+					log.Printf("Failed to marshal discord config: %v", err)
+					return nil
+				}
+				if err := json.Unmarshal(discordBytes, &newConfig.Discord); err != nil {
+					log.Printf("Failed to parse discord config: %v", err)
+				}
 			}
 			if telegramJson := e.Record.Get("telegram"); telegramJson != nil {
-				telegramBytes, _ := json.Marshal(telegramJson)
-				json.Unmarshal(telegramBytes, &newConfig.Telegram)
+				telegramBytes, err := json.Marshal(telegramJson)
+				if err != nil {
+					log.Printf("Failed to marshal telegram config: %v", err)
+					return nil
+				}
+				if err := json.Unmarshal(telegramBytes, &newConfig.Telegram); err != nil {
+					log.Printf("Failed to parse telegram config: %v", err)
+				}
 			}
 			if rulesJson := e.Record.Get("rules"); rulesJson != nil {
-				rulesBytes, _ := json.Marshal(rulesJson)
-				json.Unmarshal(rulesBytes, &newConfig.Rules)
+				rulesBytes, err := json.Marshal(rulesJson)
+				if err != nil {
+					log.Printf("Failed to marshal rules: %v", err)
+					return nil
+				}
+				if err := json.Unmarshal(rulesBytes, &newConfig.Rules); err != nil {
+					log.Printf("Failed to parse rules: %v", err)
+				}
 			}
 
 			if err := notificationService.UpdateConfig(&newConfig); err != nil {
@@ -219,15 +253,15 @@ func initializePublicSettings(app *pocketbase.PocketBase) error {
 	}
 
 	// Try to find an existing settings record
-	record, err := app.Dao().FindFirstRecordByData("settings_public", "id", "default")
+	_, err = app.Dao().FindFirstRecordByData("settings_public", "id", "default")
 	if err != nil {
 		// Only create a new record if none exists
-		record = models.NewRecord(collection)
-		record.Set("id", "default")
-		record.Set("setup_completed", false)
-		record.Set("initial_setup_done", false)
+		setupRecord := models.NewRecord(collection)
+		setupRecord.Set("id", "default")
+		setupRecord.Set("setup_completed", false)
+		setupRecord.Set("initial_setup_done", false)
 
-		if err := app.Dao().SaveRecord(record); err != nil {
+		if err := app.Dao().SaveRecord(setupRecord); err != nil {
 			return fmt.Errorf("failed to create initial public settings: %v", err)
 		}
 
@@ -239,8 +273,8 @@ func initializePublicSettings(app *pocketbase.PocketBase) error {
 		}
 
 		// Mark initial setup as done
-		record.Set("initial_setup_done", true)
-		if err := app.Dao().SaveRecord(record); err != nil {
+		setupRecord.Set("initial_setup_done", true)
+		if err := app.Dao().SaveRecord(setupRecord); err != nil {
 			return fmt.Errorf("failed to mark initial setup as done: %v", err)
 		}
 	}
@@ -269,12 +303,12 @@ func InitializeApp(app *pocketbase.PocketBase) error {
 		}
 
 		// Check if setup is completed
-		record, err := app.Dao().FindFirstRecordByData("settings_public", "id", "default")
+		setupRecord, err := app.Dao().FindFirstRecordByData("settings_public", "id", "default")
 		if err != nil {
 			return fmt.Errorf("failed to check setup status: %v", err)
 		}
 
-		setupCompleted, _ := record.Get("setup_completed").(bool)
+		setupCompleted, _ := setupRecord.Get("setup_completed").(bool)
 		if setupCompleted {
 			// Count existing admins
 			var count int
@@ -424,19 +458,20 @@ func EnsureGroupsCollection(app *pocketbase.PocketBase) error {
 
 	// Create each default group if it doesn't exist
 	for _, group := range defaultGroups {
-		record, err := app.Dao().FindFirstRecordByData("groups", "name", group["name"])
+		// Just check if the group exists
+		_, err := app.Dao().FindFirstRecordByData("groups", "name", group["name"])
 		if err != nil {
 			collection, err := app.Dao().FindCollectionByNameOrId("groups")
 			if err != nil {
 				return err
 			}
 
-			record = models.NewRecord(collection)
-			record.Set("name", group["name"])
-			record.Set("description", group["description"])
-			record.Set("permissions", group["permissions"])
+			newRecord := models.NewRecord(collection)
+			newRecord.Set("name", group["name"])
+			newRecord.Set("description", group["description"])
+			newRecord.Set("permissions", group["permissions"])
 
-			if err := app.Dao().SaveRecord(record); err != nil {
+			if err := app.Dao().SaveRecord(newRecord); err != nil {
 				log.Printf("Error creating group %s: %v", group["name"], err)
 				return err
 			}

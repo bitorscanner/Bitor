@@ -13,7 +13,7 @@ func getLogoBase64() string {
 func GetInvitationEmailTemplate(inviteUrl string, appName string) string {
 	// Get the logo as base64
 	logoBase64 := getLogoBase64()
-	
+
 	// If we couldn't read the logo, use a simple fallback image
 	imgSrc := "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjQ1IiBzdHJva2U9IiMzQjgyRjYiIHN0cm9rZS13aWR0aD0iMTAiLz4KPHBhdGggZD0iTTM1IDUwTDQ1IDYwTDY1IDQwIiBzdHJva2U9IiMzQjgyRjYiIHN0cm9rZS13aWR0aD0iMTAiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgo8L3N2Zz4K"
 	if logoBase64 != "" {
@@ -90,4 +90,4 @@ func GetInvitationEmailTemplate(inviteUrl string, appName string) string {
 		</body>
 		</html>
 	`, appName, imgSrc, appName, appName, appName, inviteUrl)
-} 
+}

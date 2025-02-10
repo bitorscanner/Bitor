@@ -50,14 +50,14 @@ func HandleScheduleScan(app *pocketbase.PocketBase) echo.HandlerFunc {
 		record.Set("cron_expression", scheduleReq.CronExpression)
 		record.Set("start_date", startDate)
 		record.Set("schedule_details", scheduleReq.ScheduleDetails)
-		
+
 		// Only set end_date if it's provided and valid
 		if !scheduleReq.EndDate.IsZero() {
 			record.Set("end_date", scheduleReq.EndDate)
 		} else {
 			record.Set("end_date", nil) // Set to null if no end date provided
 		}
-		
+
 		record.Set("created", time.Now())
 
 		if err := app.Dao().SaveRecord(record); err != nil {
@@ -143,6 +143,10 @@ func HandleDeleteScheduledScan(app *pocketbase.PocketBase) echo.HandlerFunc {
 	}
 }
 
+// recordToScheduledScan converts a PocketBase record to a ScheduledScan model.
+// Currently unused but retained for future use in scan scheduling.
+// It will be used for bulk scan scheduling operations.
+// nolint:unused
 func recordToScheduledScan(record *pbModels.Record) models.ScheduledScan {
 	var scheduleDetails *models.ScheduleDetails
 	if details := record.Get("schedule_details"); details != nil {
@@ -172,7 +176,10 @@ func recordToScheduledScan(record *pbModels.Record) models.ScheduledScan {
 	}
 }
 
-// Helper functions for type conversion
+// convertToStringSlice is a helper function to convert interface{} to []string.
+// Currently unused but retained for future use in type conversion.
+// It will be used for handling dynamic schedule configurations.
+// nolint:unused
 func convertToStringSlice(v interface{}) []string {
 	if v == nil {
 		return nil
@@ -189,6 +196,10 @@ func convertToStringSlice(v interface{}) []string {
 	return nil
 }
 
+// getString is a helper function to safely convert interface{} to string.
+// Currently unused but retained for future use in type conversion.
+// It will be used for handling dynamic schedule configurations.
+// nolint:unused
 func getString(v interface{}) string {
 	if v == nil {
 		return ""
@@ -199,6 +210,10 @@ func getString(v interface{}) string {
 	return ""
 }
 
+// getInt is a helper function to safely convert interface{} to int.
+// Currently unused but retained for future use in type conversion.
+// It will be used for handling dynamic schedule configurations.
+// nolint:unused
 func getInt(v interface{}) int {
 	if v == nil {
 		return 0

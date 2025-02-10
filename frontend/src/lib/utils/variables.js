@@ -1,11 +1,11 @@
 export const imgDir = import.meta.env.VITE_API_BASE_URL;
 
 /** @type {(userId: string, avatarName: string) => string} */
-export const avatarPath = (userId, avatarName) => 
-    `${imgDir}/api/files/users/${userId}/${avatarName}`;
+export const avatarPath = (userId, avatarName) =>
+  `${imgDir}/api/files/users/${userId}/${avatarName}`;
 
 /** @type {(x:string, ...y:string[]) => string} */
-export const imagesPath = (src, ...subdirs) => 
-    [imgDir, ...subdirs, src].filter(Boolean).join('/');
+export const imagesPath = (src, ...subdirs) =>
+  [imgDir, ...subdirs, src].filter(Boolean).join("/");
 
-export const defaultAvatarPath = '/images/default_avatar.png'; 
+export const defaultAvatarPath = "/images/default_avatar.png";

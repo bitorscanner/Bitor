@@ -19,7 +19,10 @@ func GenerateAPIKey() string {
 	return hex.EncodeToString(bytes)
 }
 
-// Helper function to validate API key.
+// isValidAPIKey is a helper function to validate a scan's API key.
+// Currently unused but retained for future use in API key validation.
+// It will be used for additional security validation in upcoming features.
+// nolint:unused
 func isValidAPIKey(app *pocketbase.PocketBase, scanID, apiKey string) bool {
 	record, err := app.Dao().FindRecordById("nuclei_scans", scanID)
 	if err != nil {

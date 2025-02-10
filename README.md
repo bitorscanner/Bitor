@@ -3,7 +3,7 @@
 > ⚠️ **Note**: This software is currently in beta and under heavy development. Features and APIs may change frequently.
 
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/orbitscanner/orbit)](https://github.com/orbitscanner/orbit/releases)
-[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/orbitscanner/orbit/ci.yml?branch=main)](https://github.com/orbitscanner/orbit/actions)
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/orbitscanner/orbit/release.yml?branch=main)](https://github.com/orbitscanner/orbit/actions)
 [![GitHub stars](https://img.shields.io/github/stars/orbitscanner/orbit)](https://github.com/orbitscanner/orbit/stargazers)
 [![GitHub license](https://img.shields.io/github/license/orbitscanner/orbit)](https://github.com/orbitscanner/orbit/blob/main/LICENSE)
 [![GitHub issues](https://img.shields.io/github/issues/orbitscanner/orbit)](https://github.com/orbitscanner/orbit/issues)
@@ -63,9 +63,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
   </a>
   <p>Proudly sponsored by <a href="https://www.blackhillsinfosec.com/">Black Hills Information Security</a></p>
 </div>
-
-For more information, visit the [Orbit GitHub Repository](https://github.com/orbitscanner/orbit).
-
 
 
 

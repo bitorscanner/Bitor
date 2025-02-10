@@ -1,11 +1,11 @@
 package notifications
 
 import (
-	"net/http"
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/models"
+	"net/http"
 )
 
 func RegisterRoutes(app *pocketbase.PocketBase, g *echo.Group) {
@@ -61,4 +61,4 @@ func RegisterRoutes(app *pocketbase.PocketBase, g *echo.Group) {
 	// Register both GET and POST handlers
 	g.GET("/api/test-email", testEmailHandler, apis.RequireAdminOrRecordAuth())
 	g.POST("/api/test-email", testEmailHandler, apis.RequireAdminOrRecordAuth())
-} 
+}

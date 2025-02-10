@@ -45,7 +45,6 @@ type realTimeLogger struct {
 	logEntries []interface{} // Store logs in memory
 	lastUpdate time.Time
 	isStderr   bool // Flag to indicate if this logger is for stderr
-	dbRetries  int  // Track database retries
 }
 
 // bufferLogs stores logs in memory until we can write them to the database
@@ -55,6 +54,7 @@ func (l *realTimeLogger) bufferLogs(logEntry map[string]interface{}) {
 	l.logEntries = append(l.logEntries, logEntry)
 }
 
+// Write implements io.Writer interface
 func (l *realTimeLogger) Write(p []byte) (n int, err error) {
 	// Write to buffer
 	n, err = l.buffer.Write(p)
@@ -111,6 +111,7 @@ func (l *realTimeLogger) Write(p []byte) (n int, err error) {
 	return n, nil
 }
 
+// flushLogs writes buffered logs to the database
 func (l *realTimeLogger) flushLogs() error {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
@@ -164,8 +165,12 @@ func (l *realTimeLogger) flushLogs() error {
 			var logs []interface{}
 			rawData, err := json.Marshal(logsValue)
 			if err == nil {
-				json.Unmarshal(rawData, &logs)
-				existingLogs = logs
+				if err := json.Unmarshal(rawData, &logs); err != nil {
+					log.Printf("Failed to unmarshal logs: %v", err)
+					existingLogs = make([]interface{}, 0)
+				} else {
+					existingLogs = logs
+				}
 			}
 		}
 		if existingLogs == nil {
@@ -362,11 +367,17 @@ func ExecuteAnsiblePlaybook(playbookPath, logDir, extraVarsFile, inventoryPath, 
 		// Get any error output
 		if errOutput := errWriter.String(); errOutput != "" {
 			// Write error to stderr logger
-			stderrLogger.Write([]byte(errOutput))
+			if _, writeErr := stderrLogger.Write([]byte(errOutput)); writeErr != nil {
+				log.Printf("Failed to write to stderr logger: %v", writeErr)
+			}
 		}
 		// Force flush any remaining logs
-		stdoutLogger.flushLogs()
-		stderrLogger.flushLogs()
+		if err := stdoutLogger.flushLogs(); err != nil {
+			log.Printf("Failed to flush stdout logs: %v", err)
+		}
+		if err := stderrLogger.flushLogs(); err != nil {
+			log.Printf("Failed to flush stderr logs: %v", err)
+		}
 		return fmt.Errorf("error executing command: %v", err)
 	}
 

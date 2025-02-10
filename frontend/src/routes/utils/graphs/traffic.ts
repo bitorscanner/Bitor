@@ -1,54 +1,56 @@
-import type { ApexOptions } from 'apexcharts';
+import type { ApexOptions } from "apexcharts";
 
 interface TrafficChannelsChartColors {
   strokeColor: string;
 }
 
 const getTrafficChannelsChartConfig = (dark: boolean): ApexOptions => {
-  let trafficChannelsChartColors: TrafficChannelsChartColors = { strokeColor: '#ffffff' };
+  let trafficChannelsChartColors: TrafficChannelsChartColors = {
+    strokeColor: "#ffffff",
+  };
 
   if (dark) {
     trafficChannelsChartColors = {
-      strokeColor: '#1f2937'
+      strokeColor: "#1f2937",
     };
   } else {
     trafficChannelsChartColors = {
-      strokeColor: '#ffffff'
+      strokeColor: "#ffffff",
     };
   }
 
   return {
     series: [70, 5, 25],
-    labels: ['Desktop', 'Tablet', 'Phone'],
-    colors: ['#16BDCA', '#FDBA8C', '#1A56DB'],
+    labels: ["Desktop", "Tablet", "Phone"],
+    colors: ["#16BDCA", "#FDBA8C", "#1A56DB"],
     chart: {
-      type: 'donut',
+      type: "donut",
       height: 400,
-      fontFamily: 'Inter, sans-serif',
+      fontFamily: "Inter, sans-serif",
       toolbar: {
-        show: false
-      }
+        show: false,
+      },
     },
     responsive: [
       {
         breakpoint: 430,
         options: {
           chart: {
-            height: 300
-          }
-        }
-      }
+            height: 300,
+          },
+        },
+      },
     ],
     stroke: {
-      colors: [trafficChannelsChartColors.strokeColor]
+      colors: [trafficChannelsChartColors.strokeColor],
     },
     states: {
       hover: {
         filter: {
-          type: 'darken',
-          value: 0.9
-        }
-      }
+          type: "darken",
+          value: 0.9,
+        },
+      },
     },
     tooltip: {
       shared: true,
@@ -56,31 +58,34 @@ const getTrafficChannelsChartConfig = (dark: boolean): ApexOptions => {
       fillSeriesColor: false,
       inverseOrder: true,
       style: {
-        fontSize: '14px',
-        fontFamily: 'Inter, sans-serif'
+        fontSize: "14px",
+        fontFamily: "Inter, sans-serif",
       },
       x: {
         show: true,
-        formatter: function (_: any, { seriesIndex, w }: { seriesIndex: number; w: any }) {
+        formatter: function (
+          _: any,
+          { seriesIndex, w }: { seriesIndex: number; w: any },
+        ) {
           const label = w.config.labels[seriesIndex];
           return label;
-        }
+        },
       },
       y: {
         formatter: function (value: number) {
-          return value + '%';
-        }
-      }
+          return value + "%";
+        },
+      },
     },
     grid: {
-      show: false
+      show: false,
     },
     dataLabels: {
-      enabled: false
+      enabled: false,
     },
     legend: {
-      show: false
-    }
+      show: false,
+    },
   };
 };
 

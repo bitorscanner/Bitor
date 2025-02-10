@@ -2,11 +2,15 @@
   import { onMount, onDestroy, createEventDispatcher } from 'svelte';
   import { BlockNoteEditor } from '@blocknote/core';
   import '@blocknote/core/style.css';
+  import type { Block } from '@blocknote/core';
+  import type { BlockNoteEditor as BlockNoteEditorType } from '@blocknote/core';
+
+  /// <reference types="node" />
 
   const dispatch = createEventDispatcher();
 
   export let content: string = '';
-  let editor: BlockNoteEditor | null = null;
+  let editor: BlockNoteEditorType | null = null;
   let editorElement: HTMLElement;
   let menuElement: HTMLDivElement;
   let isMenuVisible = false;
@@ -16,6 +20,9 @@
   let updateTimeout: NodeJS.Timeout | null = null;
 
   let outsideClickListener: (event: MouseEvent) => void;
+
+  export let onUpdate: (editor: BlockNoteEditorType) => void = () => {};
+  export let initialContent: Block[] = [];
 
   type MenuItem = {
     title: string;
@@ -238,6 +245,18 @@
     });
   } else if (menuElement) {
     menuElement.style.display = 'none';
+  }
+
+  function handleImageUpload(file: File): Promise<string> {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (e.target?.result) {
+          resolve(e.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
   }
 </script>
 

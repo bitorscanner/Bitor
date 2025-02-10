@@ -31,4 +31,4 @@ type NucleiInteract struct {
 	Request     string `db:"request" json:"request"`
 	Response    string `db:"response" json:"response"`
 	Status      string `db:"status" json:"status"`
-} 
+}

@@ -4,22 +4,31 @@
   import { InfoCircleSolid } from 'flowbite-svelte-icons';
   import { pocketbase } from '$lib/stores/pocketbase';
 
-  let updateAvailable = false;
-  let isDocker = false;
-  let currentVersion = '';
-  let latestVersion = '';
-  let releaseNotes = '';
+  let currentVersion: string = '';
+  let updateAvailable: boolean = false;
+  let isDocker: boolean = false;
+  let latestVersion: string = '';
+  let releaseNotes: string = '';
   let loading = false;
   let error = '';
-  let showNotification = true;
+  let showNotification: boolean = false;
 
-  async function checkForUpdates() {
+  interface VersionResponse {
+    message: string;
+    current_version: string;
+    update_available: boolean;
+    is_docker: boolean;
+    latest_version: string;
+    release_notes?: string;
+  }
+
+  async function checkForUpdates(): Promise<void> {
     try {
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/version/check`);
-      const data = await response.json();
+      const data: VersionResponse = await response.json();
       
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to check for updates');
+        throw new Error(data.message);
       }
 
       currentVersion = data.current_version;
@@ -33,10 +42,12 @@
       updateAvailable = data.update_available;
       isDocker = data.is_docker;
       latestVersion = data.latest_version;
-      releaseNotes = data.release_notes;
+      if (data.release_notes) {
+        releaseNotes = data.release_notes;
+      }
       showNotification = true; // Show notification when update is available
-    } catch (err) {
-      console.error('Error checking for updates:', err);
+    } catch (error) {
+      console.error('Error checking for updates:', error);
     }
   }
 

@@ -3,6 +3,7 @@
 package scheduler
 
 import (
+	"fmt"
 	"log"
 	"path/filepath"
 	"strings"
@@ -141,13 +142,17 @@ func (s *ScanScheduler) executeScan(schedule models.ScheduledScan) {
 	); err != nil {
 		log.Printf("Failed to execute scan: %v", err)
 		scanRecord.Set("status", "Failed")
-		s.App.Dao().SaveRecord(scanRecord)
+		if err := s.App.Dao().SaveRecord(scanRecord); err != nil {
+			log.Printf("Failed to save scan record: %v", err)
+		}
 		return
 	}
 
 	// Update scan status to "Running"
 	scanRecord.Set("status", "Running")
-	s.App.Dao().SaveRecord(scanRecord)
+	if err := s.App.Dao().SaveRecord(scanRecord); err != nil {
+		log.Printf("Failed to save scan record: %v", err)
+	}
 }
 
 func generateCronExpression(schedule models.ScheduledScan) string {
@@ -192,7 +197,7 @@ func generateCronExpression(schedule models.ScheduledScan) string {
 	case "monthly":
 		if details.MonthlyType == "date" && details.MonthlyDate > 0 {
 			// Run at midnight on specific date of each month
-			return "0 0 " + string(details.MonthlyDate) + " * *"
+			return fmt.Sprintf("0 0 %d * *", details.MonthlyDate)
 		} else if details.MonthlyType == "day" && details.MonthlyDay != "" && details.MonthlyWeek != "" {
 			// Convert day name to number
 			dayMap := map[string]string{
@@ -224,9 +229,9 @@ func generateCronExpression(schedule models.ScheduledScan) string {
 
 			// Run at midnight on the specified day of the specified week
 			if week == "L" {
-				return "0 0 * * " + day + "L"
+				return fmt.Sprintf("0 0 * * %sL", day)
 			}
-			return "0 0 * * " + day + "#" + week
+			return fmt.Sprintf("0 0 * * %s#%s", day, week)
 		}
 	}
 

@@ -6,6 +6,10 @@ import (
 	"path/filepath"
 )
 
+// writeAnsibleFiles is a utility function for writing ansible files to the filesystem.
+// Currently unused but retained for future use in development environment setup
+// and ansible file management features.
+// nolint:unused
 func writeAnsibleFiles(ansibleFS fs.FS, ansibleBasePath string) error {
 	// Use fs.WalkDir to traverse the ansibleFS and copy files to ansibleBasePath
 	return fs.WalkDir(ansibleFS, ".", func(path string, d fs.DirEntry, err error) error {

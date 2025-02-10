@@ -159,4 +159,4 @@ func HasPermission(app *pocketbase.PocketBase, user *models.Record, action strin
 	}
 
 	return false
-} 
+}
