@@ -10,7 +10,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.202.4
 	github.com/digitalocean/godo v1.133.0
 	github.com/gorilla/websocket v1.5.3
-	github.com/labstack/echo/v4 v4.13.3
 	github.com/nikoksr/notify v1.1.0
 	github.com/pocketbase/pocketbase v0.22.24
 	github.com/robfig/cron/v3 v3.0.1
@@ -24,7 +23,6 @@ require (
 	github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible // indirect
-	github.com/labstack/gommon v0.4.2 // indirect
 	github.com/rogpeppe/go-internal v1.11.0 // indirect
 	github.com/slack-go/slack v0.15.0 // indirect
 	github.com/technoweenie/multipartstreamer v1.0.1 // indirect
@@ -99,7 +97,7 @@ require (
 	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/term v0.27.0 // indirect
-	golang.org/x/text v0.21.0 // indirect
+	golang.org/x/text v0.21.0
 	golang.org/x/time v0.8.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/api v0.204.0 // indirect

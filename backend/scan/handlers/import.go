@@ -140,7 +140,17 @@ func HandleImportNucleiScanResults(app *pocketbase.PocketBase) echo.HandlerFunc 
 						// Compare timestamps using Unix timestamps for comparison
 						newTime := existingRecord.GetDateTime("timestamp")
 						if newTime.Time().Unix() > currentLastSeen.Time().Unix() {
+							// Preserve severity override values
+							severityOverride := existingRecord.Get("severity_override")
+
 							existingRecord.Set("last_seen", finding.Timestamp)
+
+							// Only set severity and severity_order if there's no override
+							if severityOverride == nil {
+								existingRecord.Set("severity", finding.Info.Severity)
+								existingRecord.Set("severity_order", severityOrder)
+							}
+
 							if err := app.Dao().SaveRecord(existingRecord); err != nil {
 								log.Printf("Failed to update record last_seen: %v", err)
 								continue

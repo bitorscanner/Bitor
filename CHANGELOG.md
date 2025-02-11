@@ -5,7 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.5.1] - 2024-02-20
+## [Unreleased]
+
+### Added
+- Added severity override functionality in findings
+- Added status badges with tooltips for acknowledged, false positive, and remediated states
+- Added bulk update functionality for findings status
+- Added findings table improvements with better filtering and sorting
+- Added severity color coding in findings table and modals
+- Added findings grouping by template ID with collapsible sections
+- Added real-time updates for findings status changes
+- Added display of extracted results in findings details
+- Added improved visualization of matched content in findings
+
+### Changed
+- Improved findings modal UI with better organization of information
+- Enhanced severity display to show both original and override severities
+- Updated status indicators to use consistent icons across the application
+- Improved findings table performance with optimized queries
+- Enhanced findings filtering with multiple status filters
+- Enhanced display of matched content with better formatting and context
+
+### Fixed
+- Fixed issue where severity updates weren't immediately reflected in the UI
+- Fixed findings table pagination issues
+- Fixed status badge styling consistency
+- Fixed real-time updates for findings modifications
+- Fixed type errors in findings components
+- Fixed display of extracted results formatting
+
+### Security
+- Updated findings collection rules to properly handle admin permissions
+- Enhanced access control for findings management
+
+## [0.5.1] - 2024-03-XX
 
 ### Fixed
 - Fixed version display in UI to correctly show the GitHub release tag version

@@ -51,6 +51,9 @@
       request?: string;
       response?: string;
       selected?: boolean;
+      matched_at?: string;
+      extracted_results?: string[];
+      severity_override?: string;
     }
   
     interface GroupedFindings {
@@ -788,9 +791,9 @@
                 <div class="flex items-center space-x-2">
                   <!-- Severity Badge -->
                   <span
-                    class={`inline-block px-2 py-1 rounded ${getSeverityColor(severityOrderToString(group.severity_order))}`}
+                    class={`inline-block px-2 py-1 rounded ${getSeverityColor(group.findings[0].severity_override || severityOrderToString(group.severity_order))}`}
                   >
-                    {severityOrderToString(group.severity_order)}
+                    {group.findings[0].severity_override || severityOrderToString(group.severity_order)}
                   </span>
                   <!-- Template Name -->
                   <span>{group.findings[0].info.name}</span>
@@ -976,7 +979,14 @@
   
   <!-- Finding Modal -->
   {#if showModal && selectedFinding}
-    <FindingModal bind:open={showModal} finding={selectedFinding} />
+    <FindingModal 
+      bind:open={showModal} 
+      finding={selectedFinding} 
+      on:findingUpdated={async () => {
+        // Refresh the findings list
+        await loadFindings();
+      }}
+    />
   {/if}
   
   <!-- Bulk Comment Modal -->
