@@ -65,16 +65,20 @@
   export let finding: Finding | null = null;
 
   // Terminal options
-  const terminalOptions: ITerminalOptions & ITerminalInitOnlyOptions = {
-    fontFamily: 'Consolas, Monaco, "Courier New", monospace',
-    fontSize: 14,
+  const terminalOptions: ITerminalOptions = {
     theme: {
       background: '#1e1e1e',
       foreground: '#ffffff',
+      cursor: '#ffffff',
+      black: '#000000',
+      white: '#ffffff'
     },
+    fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+    fontSize: 14,
     cursorBlink: true,
-    disableStdin: true,
     convertEol: true,
+    rows: 16,
+    allowTransparency: false
   };
 
   // Terminal instances
@@ -797,13 +801,19 @@
 <style>
   .terminal-container {
     position: relative;
-    height: 200px;
-    overflow: auto;
+    height: 300px;
     background-color: #1e1e1e;
-    border-radius: 5px;
-    padding: 10px;
+    border: 1px solid #333;
   }
-  /* Additional styles if needed */
+
+  :global(.xterm) {
+    height: 100%;
+    opacity: 1 !important;
+  }
+
+  :global(.xterm-viewport) {
+    overflow-y: auto !important;
+  }
 
   .copy-message {
     position: absolute;

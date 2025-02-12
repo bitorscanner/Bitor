@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.2] - 2024-03-27
+
 ### Added
 - Added severity override functionality in findings
 - Added status badges with tooltips for acknowledged, false positive, and remediated states
@@ -25,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved findings table performance with optimized queries
 - Enhanced findings filtering with multiple status filters
 - Enhanced display of matched content with better formatting and context
+- Updated terminal font in findings modal to use Consolas, Monaco, and Courier New for better readability
+- Optimized terminal display height in findings modal for better space utilization
 
 ### Fixed
 - Fixed issue where severity updates weren't immediately reflected in the UI

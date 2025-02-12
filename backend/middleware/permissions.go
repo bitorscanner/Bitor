@@ -1,12 +1,14 @@
 package middleware
 
 import (
+	"encoding/json"
 	"net/http"
 	"strings"
 
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/models"
+	"github.com/pocketbase/pocketbase/tools/types"
 )
 
 // RequirePermission creates middleware that checks if the user has the required permission
@@ -44,18 +46,35 @@ func RequirePermission(app *pocketbase.PocketBase, action string, collection str
 				return echo.NewHTTPError(http.StatusForbidden, "Invalid group")
 			}
 
-			// Get group permissions
-			permissions := group.Get("permissions").(map[string]interface{})
+			// Get and parse group permissions
+			rawPermissions := group.Get("permissions")
+			var permissions map[string]interface{}
+
+			switch p := rawPermissions.(type) {
+			case types.JsonRaw:
+				if err := json.Unmarshal(p, &permissions); err != nil {
+					return echo.NewHTTPError(http.StatusInternalServerError, "Failed to parse permissions")
+				}
+			case map[string]interface{}:
+				permissions = p
+			default:
+				return echo.NewHTTPError(http.StatusInternalServerError, "Invalid permissions format")
+			}
 
 			// Check permission based on action
 			switch action {
 			case "read":
-				readPerms := permissions["read"].([]interface{})
+				readPerms, ok := permissions["read"].([]interface{})
+				if !ok {
+					return echo.NewHTTPError(http.StatusForbidden, "Invalid read permissions format")
+				}
 				hasPermission := false
 				for _, perm := range readPerms {
-					if perm.(string) == "*" || perm.(string) == collection {
-						hasPermission = true
-						break
+					if permStr, ok := perm.(string); ok {
+						if permStr == "*" || permStr == collection {
+							hasPermission = true
+							break
+						}
 					}
 				}
 				if !hasPermission {
@@ -63,12 +82,17 @@ func RequirePermission(app *pocketbase.PocketBase, action string, collection str
 				}
 
 			case "write":
-				writePerms := permissions["write"].([]interface{})
+				writePerms, ok := permissions["write"].([]interface{})
+				if !ok {
+					return echo.NewHTTPError(http.StatusForbidden, "Invalid write permissions format")
+				}
 				hasPermission := false
 				for _, perm := range writePerms {
-					if perm.(string) == "*" || perm.(string) == collection {
-						hasPermission = true
-						break
+					if permStr, ok := perm.(string); ok {
+						if permStr == "*" || permStr == collection {
+							hasPermission = true
+							break
+						}
 					}
 				}
 				if !hasPermission {
@@ -76,12 +100,17 @@ func RequirePermission(app *pocketbase.PocketBase, action string, collection str
 				}
 
 			case "delete":
-				deletePerms := permissions["delete"].([]interface{})
+				deletePerms, ok := permissions["delete"].([]interface{})
+				if !ok {
+					return echo.NewHTTPError(http.StatusForbidden, "Invalid delete permissions format")
+				}
 				hasPermission := false
 				for _, perm := range deletePerms {
-					if perm.(string) == "*" || perm.(string) == collection {
-						hasPermission = true
-						break
+					if permStr, ok := perm.(string); ok {
+						if permStr == "*" || permStr == collection {
+							hasPermission = true
+							break
+						}
 					}
 				}
 				if !hasPermission {
@@ -89,12 +118,20 @@ func RequirePermission(app *pocketbase.PocketBase, action string, collection str
 				}
 
 			case "manage_users":
-				if !permissions["manage_users"].(bool) {
+				manageUsers, ok := permissions["manage_users"].(bool)
+				if !ok {
+					return echo.NewHTTPError(http.StatusForbidden, "Invalid manage_users permission format")
+				}
+				if !manageUsers {
 					return echo.NewHTTPError(http.StatusForbidden, "Permission denied")
 				}
 
 			case "settings":
-				if !permissions["settings"].(bool) {
+				settings, ok := permissions["settings"].(bool)
+				if !ok {
+					return echo.NewHTTPError(http.StatusForbidden, "Invalid settings permission format")
+				}
+				if !settings {
 					return echo.NewHTTPError(http.StatusForbidden, "Permission denied")
 				}
 			}
@@ -122,40 +159,69 @@ func HasPermission(app *pocketbase.PocketBase, user *models.Record, action strin
 		return false
 	}
 
-	// Get group permissions
-	permissions := group.Get("permissions").(map[string]interface{})
+	// Get and parse group permissions
+	rawPermissions := group.Get("permissions")
+	var permissions map[string]interface{}
+
+	switch p := rawPermissions.(type) {
+	case types.JsonRaw:
+		if err := json.Unmarshal(p, &permissions); err != nil {
+			return false
+		}
+	case map[string]interface{}:
+		permissions = p
+	default:
+		return false
+	}
 
 	// Check permission based on action
 	switch action {
 	case "read":
-		readPerms := permissions["read"].([]interface{})
+		readPerms, ok := permissions["read"].([]interface{})
+		if !ok {
+			return false
+		}
 		for _, perm := range readPerms {
-			if perm.(string) == "*" || perm.(string) == collection {
-				return true
+			if permStr, ok := perm.(string); ok {
+				if permStr == "*" || permStr == collection {
+					return true
+				}
 			}
 		}
 
 	case "write":
-		writePerms := permissions["write"].([]interface{})
+		writePerms, ok := permissions["write"].([]interface{})
+		if !ok {
+			return false
+		}
 		for _, perm := range writePerms {
-			if perm.(string) == "*" || perm.(string) == collection {
-				return true
+			if permStr, ok := perm.(string); ok {
+				if permStr == "*" || permStr == collection {
+					return true
+				}
 			}
 		}
 
 	case "delete":
-		deletePerms := permissions["delete"].([]interface{})
+		deletePerms, ok := permissions["delete"].([]interface{})
+		if !ok {
+			return false
+		}
 		for _, perm := range deletePerms {
-			if perm.(string) == "*" || perm.(string) == collection {
-				return true
+			if permStr, ok := perm.(string); ok {
+				if permStr == "*" || permStr == collection {
+					return true
+				}
 			}
 		}
 
 	case "manage_users":
-		return permissions["manage_users"].(bool)
+		manageUsers, ok := permissions["manage_users"].(bool)
+		return ok && manageUsers
 
 	case "settings":
-		return permissions["settings"].(bool)
+		settings, ok := permissions["settings"].(bool)
+		return ok && settings
 	}
 
 	return false

@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"net/mail"
+	"orbit/middleware"
 	"orbit/templates/email"
 	"time"
 
@@ -90,7 +91,7 @@ func EnsureInvitationsCollection(app *pocketbase.PocketBase) error {
 func RegisterRoutes(app *pocketbase.PocketBase, e *core.ServeEvent) {
 	log.Printf("Registering invitation routes...")
 	// Create a group for the invitation routes
-	invitationsGroup := e.Router.Group("/api/invitations", apis.RequireAdminAuth())
+	invitationsGroup := e.Router.Group("/api/invitations", middleware.RequirePermission(app, "manage_users", "users"))
 	log.Printf("Created invitations group with path: /api/invitations")
 
 	// Add the invite endpoint that handles both creation and email sending
