@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Added support for bulk updates of findings status (acknowledged, false positive, remediated)
+- Added API key authentication for scan results submission
+- Added chunked file upload support for large scan results
+- Added retry mechanism for failed chunk uploads
+- Added scan scheduling system with support for daily, weekly, and monthly schedules
+- Added support for custom cron expressions in scan scheduling
+- Added notification service integration for scan events
+
+### Changed
+- Improved findings page performance with optimized database queries
+- Enhanced findings filtering and sorting capabilities
+- Updated authentication middleware to support both user sessions and API keys
+- Improved error handling in scan result processing
+- Enhanced scan status tracking and updates
+- Improved file upload handling with progress tracking
+
+### Fixed
+- Fixed findings bulk update endpoint path
+- Fixed permission checks for admin users
+- Fixed scan scheduling validation
+- Fixed notification delivery reliability
+- Fixed user invitation token handling
+
+### Security
+- Implemented secure API key generation and validation
+- Enhanced permission checks for findings access
+- Added validation for file uploads
+- Improved authentication token handling
+
 ## [0.5.2] - 2024-03-27
 
 ### Added

@@ -300,9 +300,9 @@
         fetchScans();
     }
 
-    function handlePageChange(event: CustomEvent<number>) {
+    async function handlePageChange(event: CustomEvent<number>) {
         currentPage = event.detail;
-        fetchScans();
+        await fetchScans(); // Await the fetch to ensure data is updated
     }
 
     async function openDeleteModal(id: string) {
@@ -875,7 +875,7 @@
         <div class="flex justify-center mt-4">
             <Pagination
                 {totalPages}
-                currentPage={currentPage}
+                bind:currentPage
                 on:pageChange={handlePageChange}
                 showFirstLast={true}
             />

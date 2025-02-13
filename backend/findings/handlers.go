@@ -15,8 +15,6 @@ import (
 
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase/models"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 )
 
 // GroupedFindings represents the grouped findings.
@@ -95,24 +93,21 @@ func HandleGroupedFindings(app *pocketbase.PocketBase) echo.HandlerFunc {
 		}
 
 		if searchTerm != "" && searchField != "" {
-			if searchField == "template_id" {
-				// Case-insensitive search for template_id with partial matching
+			switch searchField {
+			case "template_id":
 				conditions = append(conditions, dbx.NewExp("LOWER(template_id) LIKE LOWER({:pattern})", dbx.Params{"pattern": "%" + searchTerm + "%"}))
-			} else if searchField == "name" {
-				// Search within the info.name field using json_extract
+			case "name":
 				conditions = append(conditions, dbx.NewExp("LOWER(json_extract(info, '$.name')) LIKE LOWER({:pattern})", dbx.Params{"pattern": "%" + searchTerm + "%"}))
-			} else if searchField == "host" {
-				// Case-insensitive search for host field
+			case "host":
 				conditions = append(conditions, dbx.NewExp("LOWER(host) LIKE LOWER({:pattern})", dbx.Params{"pattern": "%" + searchTerm + "%"}))
-			} else if searchField == "ip" {
-				// Case-insensitive search for IP field
+			case "ip":
 				conditions = append(conditions, dbx.NewExp("LOWER(ip) LIKE LOWER({:pattern})", dbx.Params{"pattern": "%" + searchTerm + "%"}))
-			} else {
+			default:
 				conditions = append(conditions, dbx.Like(searchField, "%"+searchTerm+"%"))
 			}
 		}
 
-		// New: Add conditions for status filters
+		// Add conditions for status filters
 		if len(statusFilters) > 0 {
 			var statusConditions []dbx.Expression
 
@@ -122,168 +117,116 @@ func HandleGroupedFindings(app *pocketbase.PocketBase) echo.HandlerFunc {
 					statusConditions = append(statusConditions, dbx.HashExp{"acknowledged": true})
 				case "false_positive":
 					statusConditions = append(statusConditions, dbx.HashExp{"false_positive": true})
+				case "remediated":
+					statusConditions = append(statusConditions, dbx.HashExp{"remediated": true})
 				case "no_status":
 					statusConditions = append(statusConditions, dbx.And(
 						dbx.HashExp{"acknowledged": false},
 						dbx.HashExp{"false_positive": false},
+						dbx.HashExp{"remediated": false},
 					))
 				}
 			}
 
 			if len(statusConditions) > 0 {
-				// Combine all status conditions with OR
-				statusCond := dbx.Or(statusConditions...)
-				conditions = append(conditions, statusCond)
+				conditions = append(conditions, dbx.Or(statusConditions...))
 			}
 		}
 
-		// Combine conditions using dbx.And
-		whereCond := dbx.And(conditions...)
-
-		// Prepare the base query for counting total groups
-		totalGroupsQuery := app.DB().
-			Select("COUNT(DISTINCT template_id)").
-			From("nuclei_results")
-
+		// Combine all conditions
+		var whereCond dbx.Expression
 		if len(conditions) > 0 {
-			totalGroupsQuery.Where(whereCond)
+			whereCond = dbx.And(conditions...)
 		}
 
-		// Get total number of groups (distinct template_id) matching the conditions
+		// Build the base query for counting total groups
+		countQuery := app.DB().
+			Select("COUNT(DISTINCT template_id) as total").
+			From("nuclei_results")
+
+		if whereCond != nil {
+			countQuery.Where(whereCond)
+		}
+
+		// Get total number of groups
 		var totalGroups int
-		err := totalGroupsQuery.Row(&totalGroups)
+		err := countQuery.Row(&totalGroups)
 		if err != nil {
-			return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			return c.JSON(http.StatusInternalServerError, map[string]interface{}{
 				"error":   "Failed to get total groups",
 				"details": err.Error(),
 			})
 		}
 
-		// Prepare the base query for fetching groups
-		baseQuery := app.DB().
-			Select("template_id", "severity_order", "COUNT(*) as count").
+		// Build the main query for fetching findings
+		query := app.DB().
+			Select(
+				"template_id",
+				"severity_order",
+				"COUNT(*) as count",
+				"GROUP_CONCAT(id) as finding_ids",
+			).
 			From("nuclei_results")
 
-		if len(conditions) > 0 {
-			baseQuery.Where(whereCond)
+		if whereCond != nil {
+			query.Where(whereCond)
 		}
 
-		baseQuery.GroupBy("template_id", "severity_order")
+		query.GroupBy("template_id", "severity_order")
 
-		// Valid sort fields to prevent SQL injection
-		validSortFields := map[string]bool{
-			"severity_order": true,
-			"template_id":    true,
-			"count":          true,
-			// Add other valid fields as needed
+		// Apply sorting
+		if sortField == "severity_order" {
+			if sortDirection == "desc" {
+				query.OrderBy("severity_order DESC")
+			} else {
+				query.OrderBy("severity_order ASC")
+			}
+		} else if sortField == "template_id" {
+			if sortDirection == "desc" {
+				query.OrderBy("template_id DESC")
+			} else {
+				query.OrderBy("template_id ASC")
+			}
 		}
 
-		// Validate sortField
-		if !validSortFields[sortField] {
-			return c.JSON(http.StatusBadRequest, map[string]interface{}{
-				"error": fmt.Sprintf("Invalid sort field: %s", sortField),
-			})
+		// Apply pagination
+		query.Limit(int64(perPage)).
+			Offset(int64((page - 1) * perPage))
+
+		// Execute the query
+		var results []struct {
+			TemplateID    string `db:"template_id"`
+			SeverityOrder int    `db:"severity_order"`
+			Count         int    `db:"count"`
+			FindingIDs    string `db:"finding_ids"`
 		}
 
-		// Apply standard sorting
-		orderBy := sortField
-		if strings.ToLower(sortDirection) == "desc" {
-			orderBy += " DESC"
-		} else {
-			orderBy += " ASC"
-		}
-		baseQuery.OrderBy(orderBy)
-
-		// Pagination
-		baseQuery.Limit(int64(perPage)).Offset(int64((page - 1) * perPage))
-
-		// Get the groups
-		var groups []GroupedFindings
-		err = baseQuery.All(&groups)
-		if err != nil {
-			return c.JSON(http.StatusBadRequest, map[string]interface{}{
-				"error":   "Failed to get grouped findings",
+		if err := query.All(&results); err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+				"error":   "Failed to fetch findings",
 				"details": err.Error(),
 			})
 		}
 
-		// For each group, fetch findings and include client data
-		for i, group := range groups {
-			// Include the same conditions when fetching individual findings
-			findingConditions := []dbx.Expression{
-				dbx.HashExp{"template_id": group.TemplateID},
-				dbx.HashExp{"severity_order": group.SeverityOrder},
-			}
+		// Process the results
+		var groups []GroupedFindings
+		for _, result := range results {
+			// Split the finding IDs
+			findingIDs := strings.Split(result.FindingIDs, ",")
 
-			if len(severityFilters) > 0 {
-				findingConditions = append(findingConditions, dbx.In("severity", stringSliceToInterfaceSlice(severityFilters)...))
-			}
-
-			if len(clientFilters) > 0 {
-				findingConditions = append(findingConditions, dbx.In("client", stringSliceToInterfaceSlice(clientFilters)...))
-			}
-
-			if searchTerm != "" && searchField != "" {
-				if searchField == "template_id" {
-					// Case-insensitive search for template_id with partial matching
-					findingConditions = append(findingConditions, dbx.NewExp("LOWER(template_id) LIKE LOWER({:pattern})", dbx.Params{"pattern": "%" + searchTerm + "%"}))
-				} else if searchField == "name" {
-					// Search within the info.name field using json_extract
-					findingConditions = append(findingConditions, dbx.NewExp("LOWER(json_extract(info, '$.name')) LIKE LOWER({:pattern})", dbx.Params{"pattern": "%" + searchTerm + "%"}))
-				} else if searchField == "host" {
-					// Case-insensitive search for host field
-					findingConditions = append(findingConditions, dbx.NewExp("LOWER(host) LIKE LOWER({:pattern})", dbx.Params{"pattern": "%" + searchTerm + "%"}))
-				} else if searchField == "ip" {
-					// Case-insensitive search for IP field
-					findingConditions = append(findingConditions, dbx.NewExp("LOWER(ip) LIKE LOWER({:pattern})", dbx.Params{"pattern": "%" + searchTerm + "%"}))
-				} else {
-					findingConditions = append(findingConditions, dbx.Like(searchField, "%"+searchTerm+"%"))
-				}
-			}
-
-			// New: Add conditions for status filters
-			if len(statusFilters) > 0 {
-				var statusConditions []dbx.Expression
-
-				for _, status := range statusFilters {
-					switch status {
-					case "acknowledged":
-						statusConditions = append(statusConditions, dbx.HashExp{"acknowledged": true})
-					case "false_positive":
-						statusConditions = append(statusConditions, dbx.HashExp{"false_positive": true})
-					case "no_status":
-						statusConditions = append(statusConditions, dbx.And(
-							dbx.HashExp{"acknowledged": false},
-							dbx.HashExp{"false_positive": false},
-						))
-					}
-				}
-
-				if len(statusConditions) > 0 {
-					// Combine all status conditions with OR
-					statusCond := dbx.Or(statusConditions...)
-					findingConditions = append(findingConditions, statusCond)
-				}
-			}
-
-			whereFindingCond := dbx.And(findingConditions...)
-
-			records, err := app.Dao().FindRecordsByExpr("nuclei_results", whereFindingCond)
+			// Fetch the findings for this group
+			records, err := app.Dao().FindRecordsByExpr("nuclei_results", dbx.In("id", stringSliceToInterfaceSlice(findingIDs)...))
 			if err != nil {
-				return c.JSON(http.StatusBadRequest, map[string]interface{}{
-					"error":   "Failed to get findings for group",
-					"details": err.Error(),
-				})
+				continue
 			}
 
 			var findings []map[string]interface{}
 			for _, record := range records {
-				// Fetch the client data
+				// Fetch client data if available
 				clientID := record.GetString("client")
 				var clientData map[string]interface{}
 				if clientID != "" {
-					clientRecord, err := app.Dao().FindRecordById("clients", clientID)
-					if err == nil {
+					if clientRecord, err := app.Dao().FindRecordById("clients", clientID); err == nil {
 						clientData = map[string]interface{}{
 							"id":   clientRecord.Id,
 							"name": clientRecord.GetString("name"),
@@ -291,20 +234,24 @@ func HandleGroupedFindings(app *pocketbase.PocketBase) echo.HandlerFunc {
 					}
 				}
 
-				// Convert the record to a map and include the ID
-				recordMap := recordToMap(record)
-				recordMap["id"] = record.Id
-				recordMap["client"] = clientData
+				// Convert record to map
+				finding := recordToMap(record)
+				finding["id"] = record.Id
+				finding["client"] = clientData
 
-				findings = append(findings, recordMap)
+				findings = append(findings, finding)
 			}
 
-			// Assign findings to the group
-			groups[i].Findings = findings
+			groups = append(groups, GroupedFindings{
+				TemplateID:    result.TemplateID,
+				SeverityOrder: result.SeverityOrder,
+				Count:         result.Count,
+				Findings:      findings,
+			})
 		}
 
-		// Prepare pagination metadata
-		result := map[string]interface{}{
+		// Prepare the response
+		response := map[string]interface{}{
 			"page":       page,
 			"perPage":    perPage,
 			"totalPages": totalPages(totalGroups, perPage),
@@ -312,7 +259,7 @@ func HandleGroupedFindings(app *pocketbase.PocketBase) echo.HandlerFunc {
 			"items":      groups,
 		}
 
-		return c.JSON(http.StatusOK, result)
+		return c.JSON(http.StatusOK, response)
 	}
 }
 
@@ -356,7 +303,7 @@ func HandleBulkUpdateFindings(app *pocketbase.PocketBase) echo.HandlerFunc {
 		}
 
 		// Validate update data fields
-		validFields := []string{"acknowledged", "false_positive"}
+		validFields := []string{"acknowledged", "false_positive", "remediated"}
 		for field := range payload.UpdateData {
 			if !contains(validFields, field) {
 				return c.JSON(http.StatusBadRequest, map[string]interface{}{
@@ -583,8 +530,7 @@ func HandleRecentFindings(app *pocketbase.PocketBase) echo.HandlerFunc {
 		// Group findings by severity
 		groupedFindings := make(map[string][]map[string]interface{})
 		for _, finding := range findings {
-			caser := cases.Title(language.English)
-			severity := caser.String(strings.ToLower(finding.Severity))
+			severity := strings.Title(strings.ToLower(finding.Severity))
 			infoName := finding.InfoName
 
 			groupedFindings[severity] = append(groupedFindings[severity], map[string]interface{}{

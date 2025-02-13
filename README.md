@@ -14,7 +14,7 @@
 Orbit is a powerful platform designed to facilitate large-scale Nuclei scans, enabling teams to efficiently manage and analyze scan results. By integrating modern technologies with a web frontend in SvelteKit and a backend in Go, with Terraform and Ansible for infrastructure and automation, Orbit streamlines the process of running security scans and collaborating on findings.
 
 <div align="center">
-  <img src="assets/screenshot.png" alt="Orbit Dashboard" width="100%">
+  <img src="assets/dashboard.gif" alt="Orbit Dashboard" width="100%">
 </div>
 
 ## Features

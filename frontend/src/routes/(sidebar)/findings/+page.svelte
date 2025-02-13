@@ -154,9 +154,51 @@
       }
     }
   
+    // Add interface for cached data
+    interface CachedData {
+      items: GroupedFindings[];
+      page: number;
+      perPage: number;
+      totalPages: number;
+      totalItems: number;
+      timestamp: number;
+    }
+
+    // Add interface for API response
+    interface APIResponse {
+      page: number;
+      perPage: number;
+      totalPages: number;
+      totalItems: number;
+      items: GroupedFindings[];
+    }
+
+    // Add these variables for caching
+    let cachedFindings = new Map<string, CachedData>();
+    let lastFetchTimestamp = 0;
+    let cacheTimeout = 30000; // 30 seconds cache
+  
+    // Modify the fetchGroupedFindings function
     async function fetchGroupedFindings() {
       try {
         isLoading = true;
+  
+        // Check cache first
+        const cacheKey = `${currentPage}-${sortField}-${sortDirection}-${JSON.stringify(severityFilter)}-${JSON.stringify(clientFilter)}-${searchTerm}-${searchField}-${JSON.stringify(statusFilter)}`;
+        const now = Date.now();
+        
+        if (cachedFindings.has(cacheKey) && (now - lastFetchTimestamp) < cacheTimeout) {
+          const cachedData = cachedFindings.get(cacheKey);
+          if (cachedData) {
+            groupedFindings = cachedData.items;
+            currentPage = cachedData.page;
+            perPage = cachedData.perPage;
+            totalPages = cachedData.totalPages;
+            totalItems = cachedData.totalItems;
+            isLoading = false;
+            return;
+          }
+        }
   
         // Build query parameters
         const params = new URLSearchParams();
@@ -195,70 +237,113 @@
         // Get the auth token from PocketBase
         const token = $pocketbase.authStore.token;
   
-        // Make the API request
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/findings/grouped?${params.toString()}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
+        // Use AbortController for request cancellation
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
   
-        if (!response.ok) {
-          const errorData = await response.json();
-          console.error('Error fetching grouped findings:', errorData);
-          throw new Error(`Error fetching grouped findings: ${response.statusText}`);
-        }
-  
-        const data = await response.json();
-  
-        // Extract pagination metadata
-        currentPage = data.page;
-        perPage = data.perPage;
-        totalPages = data.totalPages;
-        totalItems = data.totalItems;
-
-        // First, get all unique client IDs from the findings
-        const clientIds = new Set();
-        data.items.forEach(group => {
-          group.findings.forEach(finding => {
-            if (finding.client?.id) {
-              clientIds.add(finding.client.id);
+        try {
+          const response = await fetch(
+            `${import.meta.env.VITE_API_BASE_URL}/api/findings/grouped?${params.toString()}`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+              signal: controller.signal
             }
-          });
-        });
-
-        // Fetch full client data for each unique client ID
-        const clientsData = new Map();
-        await Promise.all(Array.from(clientIds).map(async (clientId) => {
-          try {
-            const client = await $pocketbase.collection('clients').getOne(clientId);
-            clientsData.set(clientId, {
-              ...client,
-              favicon: client.favicon ? $pocketbase.getFileUrl(client, client.favicon) : null
-            });
-          } catch (error) {
-            console.error(`Error fetching client ${clientId}:`, error);
+          );
+  
+          clearTimeout(timeoutId);
+  
+          if (!response.ok) {
+            const errorData = await response.json();
+            console.error('Error fetching grouped findings:', errorData);
+            throw new Error(`Error fetching grouped findings: ${response.statusText}`);
           }
-        }));
-
-        // Map the findings data and include the full client data
-        const mappedData = {
-          ...data,
-          items: data.items.map(group => ({
+  
+          const data = await response.json() as APIResponse;
+  
+          // Update cache
+          cachedFindings.set(cacheKey, {
+            ...data,
+            timestamp: now
+          });
+          lastFetchTimestamp = now;
+  
+          // Clean up old cache entries
+          const cacheEntries = Array.from(cachedFindings.entries());
+          if (cacheEntries.length > 20) { // Keep last 20 pages in cache
+            const oldestEntries = cacheEntries
+              .sort(([, a], [, b]) => a.timestamp - b.timestamp)
+              .slice(0, cacheEntries.length - 20);
+            oldestEntries.forEach(([key]) => cachedFindings.delete(key));
+          }
+  
+          // Extract pagination metadata
+          currentPage = data.page;
+          perPage = data.perPage;
+          totalPages = data.totalPages;
+          totalItems = data.totalItems;
+  
+          // Optimize client data fetching
+          const clientIds = new Set<string>();
+          data.items.forEach((group: GroupedFindings) => {
+            group.findings.forEach((finding: Finding) => {
+              if (finding.client?.id) {
+                clientIds.add(finding.client.id);
+              }
+            });
+          });
+  
+          // Batch fetch client data
+          const clientsData = new Map<string, any>();
+          const batchSize = 50;
+          const clientIdArray = Array.from(clientIds);
+          
+          for (let i = 0; i < clientIdArray.length; i += batchSize) {
+            const batch = clientIdArray.slice(i, i + batchSize);
+            const batchFilter = batch.map(id => `id="${id}"`).join('||');
+            
+            try {
+              const clientsBatch = await $pocketbase.collection('clients').getList(1, batchSize, {
+                filter: batchFilter
+              });
+              
+              clientsBatch.items.forEach(client => {
+                clientsData.set(client.id, {
+                  ...client,
+                  favicon: client.favicon ? $pocketbase.getFileUrl(client, client.favicon) : null
+                });
+              });
+            } catch (error: unknown) {
+              const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+              console.error(`Error fetching clients batch ${i}:`, errorMessage);
+            }
+          }
+  
+          // Map the findings data with optimized client data
+          groupedFindings = data.items.map((group: GroupedFindings) => ({
             ...group,
-            findings: group.findings.map(finding => ({
+            findings: group.findings.map((finding: Finding) => ({
               ...finding,
               client: finding.client?.id ? {
                 ...finding.client,
                 ...clientsData.get(finding.client.id)
               } : null
             }))
-          }))
-        };
+          }));
   
-        groupedFindings = initializeSelections(mappedData);
-      } catch (error) {
-        console.error('Error fetching grouped findings:', error);
+        } finally {
+          clearTimeout(timeoutId);
+        }
+  
+      } catch (error: unknown) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          console.log('Request was aborted due to timeout');
+        } else {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          console.error('Error fetching grouped findings:', errorMessage);
+        }
       } finally {
         isLoading = false;
       }
@@ -362,7 +447,7 @@
     async function updateFindingsBulk(ids: string[], updateData: Record<string, any>) {
       const token = $pocketbase.authStore.token;
 
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/nuclei_results/bulk-update`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/findings/bulk-update`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,

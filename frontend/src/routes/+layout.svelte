@@ -22,6 +22,14 @@
 	async function loadUserData() {
 		if ($pocketbase.authStore.isValid && $pocketbase.authStore.model?.id) {
 			try {
+				// Check if the current user is an admin
+				if ($pocketbase.authStore.isAdmin) {
+					// For admin users, we don't need to fetch additional data
+					currentUser.set($pocketbase.authStore.model);
+					return;
+				}
+
+				// For regular users, fetch their data with group expansion
 				const user = await $pocketbase.collection('users').getOne(
 					$pocketbase.authStore.model.id,
 					{
@@ -39,8 +47,13 @@
 				};
 				
 				currentUser.set(enrichedUser);
-			} catch (error) {
+			} catch (error: any) {
 				console.error('Error loading user data:', error);
+				// If the user record doesn't exist anymore (404), clear the auth store
+				if (error.status === 404) {
+					$pocketbase.authStore.clear();
+					await safeGoto('/authentication/sign-in');
+				}
 			}
 		}
 	}

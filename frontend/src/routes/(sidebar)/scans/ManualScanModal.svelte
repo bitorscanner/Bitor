@@ -3,21 +3,32 @@
   import { Modal, Button, Alert } from 'flowbite-svelte';
   import { InfoCircleSolid } from 'flowbite-svelte-icons';
   import { pocketbase } from '$lib/stores/pocketbase';
+  import type { RecordModel } from 'pocketbase';
 
-  export let open: boolean;
-  const dispatch = createEventDispatcher();
+  interface Client {
+    id: string;
+    name: string;
+  }
 
-  let file: File | null = null;
+  export let open = false;
+  let clients: Client[] = [];
   let selectedClientId = '';
-  let clients = [];
-  let userToken = $pocketbase.authStore.token;
+  let file: File | null = null;
   let uploadProgress = 0;
   let showAlert = false;
+  let currentChunk = 0;
+  let totalChunks = 0;
+  const chunkSize = 5 * 1024 * 1024; // 5MB chunks
+  const userToken = $pocketbase.authStore.token;
+  const dispatch = createEventDispatcher();
 
   async function fetchClients() {
     try {
-      const result = await $pocketbase.collection('clients').getFullList();
-      clients = result;
+      const records = await $pocketbase.collection('clients').getFullList();
+      clients = records.map((record: RecordModel) => ({
+        id: record.id,
+        name: record.name
+      }));
     } catch (error) {
       console.error('Error fetching clients:', error);
     }
@@ -34,6 +45,47 @@
     }
   }
 
+  async function uploadChunk(file: File, scanId: string, chunk: Blob, chunkIndex: number, totalChunks: number) {
+    const formData = new FormData();
+    formData.append('file', chunk, file.name);
+    formData.append('scan_id', scanId);
+    formData.append('chunk_index', chunkIndex.toString());
+    formData.append('total_chunks', totalChunks.toString());
+    formData.append('client_id', selectedClientId);
+
+    const maxRetries = 3;
+    let retryCount = 0;
+
+    while (retryCount < maxRetries) {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/scan/import-scan-results`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${userToken}`,
+          },
+          body: formData
+        });
+
+        if (response.ok) {
+          return response;
+        }
+
+        if (response.status === 403) {
+          throw new Error('Authentication failed. Please check if you are logged in and try again.');
+        }
+
+        throw new Error(`Upload failed with status: ${response.status}`);
+      } catch (error) {
+        retryCount++;
+        if (retryCount === maxRetries) {
+          throw error;
+        }
+        // Wait before retrying (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
+      }
+    }
+  }
+
   async function handleImport() {
     if (!file || !selectedClientId) {
       alert('Please select a file and a client.');
@@ -45,6 +97,13 @@
       const client = clients.find(c => c.id === selectedClientId);
       const clientName = client ? client.name : 'Unknown Client';
 
+      // Validate file size
+      const maxFileSize = 1024 * 1024 * 1024; // 1GB max
+      if (file.size > maxFileSize) {
+        alert('File size exceeds maximum limit of 1GB');
+        return;
+      }
+
       const newScan = await $pocketbase.collection('nuclei_scans').create({
         name: scanId,
         client: selectedClientId,
@@ -52,43 +111,60 @@
       });
 
       const newScanId = newScan.id;
+      
+      // Calculate total chunks
+      totalChunks = Math.ceil(file.size / chunkSize);
+      currentChunk = 0;
+      let failedChunks = [];
 
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('client_id', selectedClientId);
-      formData.append('scan_id', newScanId);
-
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', 'http://localhost:8090/api/scan/import-scan-results', true);
-      xhr.setRequestHeader('Authorization', `Bearer ${userToken}`);
-
-      xhr.upload.onprogress = (event) => {
-        if (event.lengthComputable) {
-          uploadProgress = (event.loaded / event.total) * 100;
+      // Upload chunks
+      for (let start = 0; start < file.size; start += chunkSize) {
+        const chunk = file.slice(start, Math.min(start + chunkSize, file.size));
+        currentChunk++;
+        
+        try {
+          await uploadChunk(file, newScanId, chunk, currentChunk, totalChunks);
+          // Update progress
+          uploadProgress = (currentChunk / totalChunks) * 100;
+        } catch (error) {
+          console.error(`Error uploading chunk ${currentChunk}:`, error);
+          failedChunks.push(currentChunk);
+          
+          // If we have failed chunks, try to retry them
+          if (failedChunks.length > 0) {
+            const retryResult = await retryFailedChunks(file, newScanId, failedChunks);
+            if (!retryResult) {
+              throw new Error('Failed to upload some chunks after retries');
+            }
+          }
         }
-      };
+      }
 
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          console.log('File uploaded successfully.');
-          dispatch('import');
-        } else {
-          console.error('Failed to upload file');
-        }
-      };
-
-      xhr.onerror = () => {
-        console.error('Error uploading file');
-      };
-
-      xhr.send(formData);
-
-      // Immediately close the modal and show the alert
+      console.log('File upload completed successfully');
+      dispatch('import');
       open = false;
       showAlert = true;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error during file upload:', error);
+      alert(error instanceof Error ? error.message : 'Upload failed. Please try again.');
     }
+  }
+
+  async function retryFailedChunks(file: File, scanId: string, failedChunks: number[]) {
+    for (const chunkIndex of failedChunks) {
+      const start = (chunkIndex - 1) * chunkSize;
+      const chunk = file.slice(start, Math.min(start + chunkSize, file.size));
+      
+      try {
+        await uploadChunk(file, scanId, chunk, chunkIndex, totalChunks);
+        // Remove from failed chunks if successful
+        failedChunks = failedChunks.filter(index => index !== chunkIndex);
+      } catch (error) {
+        console.error(`Failed to retry chunk ${chunkIndex}:`, error);
+        return false;
+      }
+    }
+    return failedChunks.length === 0;
   }
 
   function generateScanId() {
@@ -96,7 +172,7 @@
   }
 </script>
 
-<Modal bind:open={open} on:close={() => open = false} closeButton>
+<Modal bind:open size="md">
   <div slot="header">
     <h3 class="text-lg font-medium text-gray-900 dark:text-white">
       Manually Add Scan Results
@@ -130,13 +206,28 @@
         {/each}
       </select>
     </div>
-    <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-      <div class="bg-blue-600 h-2.5 rounded-full" style="width: {uploadProgress}%"></div>
-    </div>
+    {#if uploadProgress > 0}
+      <div class="w-full">
+        <div class="flex justify-between mb-1">
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+            Uploading... ({currentChunk} of {totalChunks} chunks)
+          </span>
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+            {Math.round(uploadProgress)}%
+          </span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+          <div 
+            class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" 
+            style="width: {uploadProgress}%"
+          ></div>
+        </div>
+      </div>
+    {/if}
   </div>
   <div slot="footer">
     <Button on:click={handleImport}>Import</Button>
-    <Button color="gray" on:click={() => open = false}>Cancel</Button>
+    <Button color="alternative" on:click={() => open = false}>Cancel</Button>
   </div>
 </Modal>
 
