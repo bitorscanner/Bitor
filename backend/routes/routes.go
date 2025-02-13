@@ -10,6 +10,7 @@ import (
 	"orbit/providers/aws"
 	"orbit/providers/digitalocean"
 	"orbit/scan"
+	"orbit/scan/profiles"
 	"orbit/scheduler"
 	"orbit/services/notification"
 	"orbit/templates"
@@ -161,6 +162,7 @@ func RegisterRoutes(app *pocketbase.PocketBase, ansibleBasePath string, notifica
 	templates.RegisterRoutes(app, e)
 	version.RegisterRoutes(e)
 	notifications.RegisterRoutes(app, apiGroup)
+	profiles.RegisterRoutes(app, apiGroup)
 	log.Printf("Registering users routes...")
 	users.RegisterRoutes(app, e)
 	log.Printf("Users routes registered")

@@ -218,6 +218,7 @@ backend/pb_public/*
 backend/ansible/keys
 backend/ansible/scans
 backend/nuclei-templates
+backend/nuclei-profiles
 !backend/ansible/.gitkeep
 
 .ansible/

@@ -15,6 +15,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added scan scheduling system with support for daily, weekly, and monthly schedules
 - Added support for custom cron expressions in scan scheduling
 - Added notification service integration for scan events
+- Added Nuclei Findings Save as Default Filter
+- Added support for all official Nuclei profiles including:
+  - Cloud configurations (AWS, Azure, Alibaba)
+  - Compliance checks
+  - CVE scanning
+  - Default login detection
+  - Kubernetes cluster security
+  - Known Exploited Vulnerabilities (KEV)
+  - Misconfigurations
+  - OSINT gathering
+  - Penetration testing
+  - Privilege escalation
+  - Subdomain takeovers
+  - Windows security auditing
+  - WordPress security
 
 ### Changed
 - Improved findings page performance with optimized database queries

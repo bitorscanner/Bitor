@@ -18,6 +18,13 @@
     import { pocketbase } from '$lib/stores/pocketbase';
     import AddProfileForm from './AddProfileForm.svelte';
     import ProfileBuilderModal from './ProfileBuilderModal.svelte';
+    import type { RecordModel } from 'pocketbase';
+  
+    interface Profile extends RecordModel {
+      name: string;
+      profile: Record<string, any>;
+      raw_yaml: string;
+    }
   
     const defaultConfig = {
       'max-host-error': 500,
@@ -36,7 +43,7 @@
       id: '',
       raw_yaml: ''
     };
-    let profiles: Array<any> = [];
+    let profiles: Profile[] = [];
   
     async function createDefaultProfile() {
       try {
@@ -68,7 +75,7 @@ no-color: true`,
   
     async function fetchProfiles() {
       try {
-        const result = await $pocketbase.collection('nuclei_profiles').getList();
+        const result = await $pocketbase.collection('nuclei_profiles').getList<Profile>();
         profiles = result.items;
       } catch (error) {
         console.error('Error fetching profiles:', error);
@@ -85,7 +92,7 @@ no-color: true`,
       showProfileForm = true;
     }
   
-    function openEditModal(profile) {
+    function openEditModal(profile: Profile) {
       currentProfileData = { ...profile };
       showProfileForm = true;
     }
@@ -100,36 +107,56 @@ no-color: true`,
         }
       }
     }
+  
+    async function addOfficialProfiles() {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/profiles/add-official`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${$pocketbase.authStore.token}`
+          }
+        });
+  
+        if (!response.ok) {
+          throw new Error('Failed to add official profiles');
+        }
+  
+        await fetchProfiles();
+      } catch (error) {
+        console.error('Error adding official profiles:', error);
+      }
+    }
   </script>
   
 <main class="p-4">
-  <Card class="w-full">
+  <Card>
     <div class="space-y-8">
       <!-- Heading for Nuclei Profiles -->
-      <Heading tag="h2" class="text-xl font-semibold mb-4">Nuclei Profiles</Heading>
+      <Heading tag="h2" customSize="text-xl font-semibold mb-4">Nuclei Profiles</Heading>
 
       <!-- Buttons to Add Profile -->
       <div class="flex space-x-4 mb-4">
         <Button on:click={openAddProfileModal}>Add Profile (YAML)</Button>
         <Button on:click={() => (showProfileBuilder = true)}>Profile Builder</Button>
+        <Button on:click={addOfficialProfiles} color="alternative">Add Official Profiles</Button>
       </div>
 
       <!-- Profiles Table -->
       <div>
-        <Table class="w-full border border-gray-200 dark:border-gray-700">
-          <TableHead class="bg-gray-100 dark:bg-gray-700">
+        <Table>
+          <TableHead>
             {#each ['Name', 'Created', 'Actions'] as title}
-              <TableHeadCell class="ps-4 font-normal">{title}</TableHeadCell>
+              <TableHeadCell>{title}</TableHeadCell>
             {/each}
           </TableHead>
           <TableBody>
             {#each profiles as profile}
-              <TableBodyRow class="text-base hover:bg-gray-50 dark:hover:bg-gray-800">
-                <TableBodyCell class="p-4">{profile.name}</TableBodyCell>
-                <TableBodyCell class="p-4">{new Date(profile.created).toLocaleDateString()}</TableBodyCell>
+              <TableBodyRow>
+                <TableBodyCell>{profile.name}</TableBodyCell>
+                <TableBodyCell>{new Date(profile.created).toLocaleDateString()}</TableBodyCell>
                 <TableBodyCell class="space-x-2">
                   <Button size="sm" on:click={() => openEditModal(profile)}>Edit</Button>
-                  <Button size="sm" color="failure" on:click={() => deleteProfile(profile.id)}>Delete</Button>
+                  <Button size="sm" color="red" on:click={() => deleteProfile(profile.id)}>Delete</Button>
                 </TableBodyCell>
               </TableBodyRow>
             {/each}
@@ -142,7 +169,7 @@ no-color: true`,
         <AddProfileForm
           bind:open={showProfileForm}
           bind:currentProfileData
-          on:refreshProfiles={fetchProfiles}
+          fetchProfiles={fetchProfiles}
         />
       {/if}
 

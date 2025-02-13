@@ -13,9 +13,12 @@
       Input,
       Select,
       Label,
+      Alert,
+      Toast,
     } from 'flowbite-svelte';
     import FindingModal from './FindingModal.svelte';
     import BulkCommentModal from './BulkCommentModal.svelte';
+    import { CheckCircleSolid } from 'flowbite-svelte-icons';
   
     interface Finding {
       id: string;
@@ -349,12 +352,12 @@
       }
     }
   
-    function initializeSelections(data) {
-      return data.items.map((group) => ({
+    function initializeSelections(data: APIResponse) {
+      return data.items.map((group: GroupedFindings) => ({
         ...group,
         selected: false,
         indeterminate: false,
-        findings: group.findings.map((finding) => ({
+        findings: group.findings.map((finding: Finding) => ({
           ...finding,
           selected: false,
         })),
@@ -490,6 +493,7 @@
 
       // Load other data
       await fetchClients();
+      await loadDefaultFilters();
       await fetchGroupedFindings();
     });
 
@@ -626,7 +630,7 @@
       }
     }
 
-    function toggleGroupSelection(groupIndex) {
+    function toggleGroupSelection(groupIndex: number) {
       groupedFindings[groupIndex] = {
         ...groupedFindings[groupIndex],
         selected: !groupedFindings[groupIndex].selected,
@@ -723,6 +727,106 @@
         daysAgo
       };
     }
+
+    interface UserPreferences {
+      findings_filters: {
+        severity: string[];
+        client: string[];
+        status: string[];
+      };
+      admin_id?: string;
+      users_relation?: string;
+    }
+
+    let showToast = false;
+    let toastMessage = '';
+
+    async function loadDefaultFilters() {
+      try {
+        const isAdmin = $pocketbase.authStore.isAdmin;
+        const userId = $pocketbase.authStore.model?.id;
+        if (!userId) return;
+
+        let filter = '';
+        if (isAdmin) {
+          filter = `admin_id="${userId}"`;
+        } else {
+          filter = `users_relation="${userId}"`;
+        }
+
+        const record = await $pocketbase.collection('user_preferences').getFirstListItem(filter);
+        if (record?.findings_filters) {
+          const filters = record.findings_filters;
+          if (filters.severity) severityFilter = filters.severity;
+          if (filters.client) clientFilter = filters.client;
+          if (filters.status) statusFilter = filters.status;
+          await fetchGroupedFindings();
+        }
+      } catch (error: unknown) {
+        if (error && typeof error === 'object' && 'status' in error && error.status !== 404) {
+          console.error('Error loading default filters:', error);
+        }
+      }
+    }
+
+    async function saveAsDefaultFilters() {
+      try {
+        const isAdmin = $pocketbase.authStore.isAdmin;
+        const userId = $pocketbase.authStore.model?.id;
+        if (!userId) return;
+
+        let filter = '';
+        if (isAdmin) {
+          filter = `admin_id="${userId}"`;
+        } else {
+          filter = `users_relation="${userId}"`;
+        }
+
+        const filters: UserPreferences['findings_filters'] = {
+          severity: severityFilter,
+          client: clientFilter,
+          status: statusFilter
+        };
+
+        let record;
+        try {
+          // Try to find existing preferences
+          record = await $pocketbase.collection('user_preferences').getFirstListItem(filter);
+          // Update existing record
+          await $pocketbase.collection('user_preferences').update(record.id, {
+            findings_filters: filters
+          });
+        } catch (error: unknown) {
+          if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
+            // Create new preferences record
+            const data: UserPreferences = {
+              findings_filters: filters
+            };
+            if (isAdmin) {
+              data.admin_id = userId;
+            } else {
+              data.users_relation = userId;
+            }
+            await $pocketbase.collection('user_preferences').create(data);
+          } else {
+            throw error;
+          }
+        }
+
+        showToast = true;
+        toastMessage = 'Filters saved successfully';
+        setTimeout(() => {
+          showToast = false;
+        }, 3000);
+      } catch (error: unknown) {
+        console.error('Error saving default filters:', error);
+        showToast = true;
+        toastMessage = 'Error saving filters';
+        setTimeout(() => {
+          showToast = false;
+        }, 3000);
+      }
+    }
   </script>
   
   <Card size="xl" class="shadow-sm max-w-none">
@@ -799,8 +903,9 @@
         </Select>
       </div>
       <!-- Apply Filters Button -->
-      <div class="flex items-end">
+      <div class="flex items-end space-x-2">
         <Button type="submit">Apply Filters</Button>
+        <Button color="alternative" on:click={saveAsDefaultFilters}>Save as Default</Button>
       </div>
     </form>
   
@@ -1133,5 +1238,16 @@
   {/if}
   {#if updateError}
     <p class="text-red-500">Error: {updateError}</p>
+  {/if}
+  
+  {#if showToast}
+    <div class="fixed bottom-4 right-4">
+      <Toast>
+        <div class="flex items-center gap-2">
+          <CheckCircleSolid class="w-5 h-5 text-green-500" />
+          <span class="text-sm font-semibold">{toastMessage}</span>
+        </div>
+      </Toast>
+    </div>
   {/if}
   
