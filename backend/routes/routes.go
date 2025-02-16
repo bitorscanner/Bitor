@@ -11,6 +11,7 @@ import (
 	"orbit/providers/digitalocean"
 	"orbit/scan"
 	"orbit/scan/profiles"
+	scanTemplates "orbit/scan/templates"
 	"orbit/scheduler"
 	"orbit/services/notification"
 	"orbit/templates"
@@ -83,20 +84,50 @@ func InitNotificationService(app *pocketbase.PocketBase) (*notification.Notifica
 			}
 		}
 
-		// Parse rules
-		if rulesJson := record.Get("rules"); rulesJson != nil {
-			rulesBytes, err := json.Marshal(rulesJson)
+		// Parse Jira config
+		if jiraJson := record.Get("jira"); jiraJson != nil {
+			jiraBytes, err := json.Marshal(jiraJson)
 			if err != nil {
-				return nil, fmt.Errorf("failed to marshal rules: %v", err)
+				return nil, fmt.Errorf("failed to marshal jira config: %v", err)
 			}
-			if err := json.Unmarshal(rulesBytes, &config.Rules); err != nil {
-				return nil, fmt.Errorf("failed to parse notification rules: %v", err)
+			if err := json.Unmarshal(jiraBytes, &config.Jira); err != nil {
+				return nil, fmt.Errorf("failed to parse jira config: %v", err)
 			}
+		}
+
+		// Parse rules from the data field
+		if dataField := record.Get("data"); dataField != nil {
+			var rulesData struct {
+				Rules []notification.NotificationRule `json:"rules"`
+			}
+
+			// Convert the data to JSON bytes
+			var jsonBytes []byte
+			switch v := dataField.(type) {
+			case string:
+				jsonBytes = []byte(v)
+			case []byte:
+				jsonBytes = v
+			default:
+				jsonBytes, err = json.Marshal(v)
+				if err != nil {
+					log.Printf("Error marshaling data field: %v", err)
+					return nil, fmt.Errorf("failed to process rules data: %v", err)
+				}
+			}
+
+			if err := json.Unmarshal(jsonBytes, &rulesData); err != nil {
+				log.Printf("Error unmarshaling rules data: %v", err)
+				return nil, fmt.Errorf("failed to parse rules data: %v", err)
+			}
+
+			config.Rules = rulesData.Rules
+			log.Printf("Loaded %d notification rules", len(config.Rules))
 		}
 	}
 
-	// Create notification service
-	notificationService, err := notification.NewNotificationService(&config)
+	// Create notification service with both app and config
+	notificationService, err := notification.NewNotificationService(app, &config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create notification service: %v", err)
 	}
@@ -131,10 +162,35 @@ func InitNotificationService(app *pocketbase.PocketBase) (*notification.Notifica
 					log.Printf("Failed to unmarshal telegram config: %v", err)
 				}
 			}
-			if rulesJson := e.Record.Get("rules"); rulesJson != nil {
-				rulesBytes, _ := json.Marshal(rulesJson)
-				if err := json.Unmarshal(rulesBytes, &newConfig.Rules); err != nil {
+			if jiraJson := e.Record.Get("jira"); jiraJson != nil {
+				jiraBytes, _ := json.Marshal(jiraJson)
+				if err := json.Unmarshal(jiraBytes, &newConfig.Jira); err != nil {
+					log.Printf("Failed to unmarshal jira config: %v", err)
+				}
+			}
+
+			// Parse rules from the data field
+			if dataField := e.Record.Get("data"); dataField != nil {
+				var rulesData struct {
+					Rules []notification.NotificationRule `json:"rules"`
+				}
+
+				// Convert the data to JSON bytes
+				var jsonBytes []byte
+				switch v := dataField.(type) {
+				case string:
+					jsonBytes = []byte(v)
+				case []byte:
+					jsonBytes = v
+				default:
+					jsonBytes, _ = json.Marshal(v)
+				}
+
+				if err := json.Unmarshal(jsonBytes, &rulesData); err != nil {
 					log.Printf("Failed to unmarshal rules config: %v", err)
+				} else {
+					newConfig.Rules = rulesData.Rules
+					log.Printf("Updated with %d notification rules", len(newConfig.Rules))
 				}
 			}
 
@@ -160,6 +216,7 @@ func RegisterRoutes(app *pocketbase.PocketBase, ansibleBasePath string, notifica
 	scan.RegisterRoutes(app, e, ansibleBasePath, notificationService)
 	findings.RegisterRoutes(app, e)
 	templates.RegisterRoutes(app, e)
+	scanTemplates.RegisterRoutes(app, apiGroup)
 	version.RegisterRoutes(e)
 	notifications.RegisterRoutes(app, apiGroup)
 	profiles.RegisterRoutes(app, apiGroup)

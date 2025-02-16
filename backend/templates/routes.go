@@ -24,7 +24,7 @@ func RegisterRoutes(app *pocketbase.PocketBase, e *core.ServeEvent) {
 	templatesGroup.GET("/", ListTemplatesHandler) // Matches /api/templates/
 	templatesGroup.GET("/content", GetTemplateContentHandler)
 	templatesGroup.POST("/content", SaveTemplateContentHandler)
-	templatesGroup.GET("/all", ListAllTemplatesHandler)   // Matches /api/templates/all
+	templatesGroup.GET("/all", ListAllTemplatesHandler)   // Matches /api/templates/all - Used by template file browser
 	templatesGroup.POST("/rename", RenameTemplateHandler) // Matches /api/templates/rename
 	templatesGroup.POST("/delete", DeleteTemplateHandler) // Matches /api/templates/delete
 }

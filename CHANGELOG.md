@@ -45,12 +45,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed scan scheduling validation
 - Fixed notification delivery reliability
 - Fixed user invitation token handling
+- Fixed notification system to handle cases where no notification rules are configured
+  - Added graceful handling when no rules exist for scan events
+  - Improved logging to show when notifications are skipped due to missing rules
+  - Fixed error handling in finding rollups for scans without findings
+  - Added default values for finding summaries when no findings exist
 
 ### Security
 - Implemented secure API key generation and validation
 - Enhanced permission checks for findings access
 - Added validation for file uploads
 - Improved authentication token handling
+- Improved notification manager to use configured rules instead of hardcoded channels
+  - Updated `NotifyScanFinished` to respect notification rules
+  - Added logging for notification rule matching and channel selection
+  - Removed hardcoded channel lists from notification methods
 
 ## [0.5.2] - 2024-03-27
 
@@ -103,3 +112,17 @@ First release of the Orbit Scanner.
 - Web interface
 - Backend API
 - Database integration 
+
+### Changed
+- Improved notification manager to use configured rules instead of hardcoded channels
+  - Updated `NotifyScanFinished` to respect notification rules
+  - Added logging for notification rule matching and channel selection
+  - Removed hardcoded channel lists from notification methods
+
+### Added
+- Added better logging for notification events
+  - Log when no enabled rules are found for an event
+  - Log the number of rules found and matching channels
+  - Log when notifications are skipped due to missing rules
+
+ 

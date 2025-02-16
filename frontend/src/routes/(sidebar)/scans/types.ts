@@ -38,4 +38,6 @@ export interface ScanFormData {
   cron?: string | null;
   startImmediately: boolean;
   status: string;
+  use_all_templates: boolean;
+  selected_templates: string[];
 }

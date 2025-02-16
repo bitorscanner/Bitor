@@ -22,6 +22,7 @@ import (
 	"orbit/scan"
 	"orbit/setup"
 	"orbit/ssh"
+	"orbit/templates"
 	"orbit/terminal"
 	"orbit/utils"
 	"orbit/utils/crypto"
@@ -144,6 +145,11 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Initialize templates for file browser
+	if err := templates.InitializeTemplates(); err != nil {
+		log.Fatal(err)
+	}
+
 	// Register migrations with automigrate enabled
 	migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{
 		Automigrate: true,
@@ -224,7 +230,7 @@ func main() {
 		}
 
 		// Initialize scan handlers
-		scan.InitHandlers(app, ansibleBasePath)
+		scan.InitHandlers(app, ansibleBasePath, notificationService)
 
 		// Terminal WebSocket handler
 		log.Printf("Registering terminal route...")

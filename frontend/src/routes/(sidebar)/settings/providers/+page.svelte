@@ -47,12 +47,13 @@
 	} from '@icons-pack/svelte-simple-icons';
 	import type { ComponentType, SvelteComponent } from 'svelte';
 	import type { RecordModel } from 'pocketbase';
-	import type { Provider, ProviderType, ApiKey } from './types';
+	import type { Provider, ProviderType, ApiKey, JiraSettings } from './types';
 	import UseMultiSelect from './UseMultiSelect.svelte';
 	import AWSProvider from './components/AWSProvider.svelte';
 	import DigitalOceanProvider from './components/DigitalOceanProvider.svelte';
 	import S3Provider from './components/S3Provider.svelte';
 	import NotificationProvider from './components/NotificationProvider.svelte';
+	import JiraProvider from './components/JiraProvider.svelte';
 
 	interface ProviderApiKeys {
 		[key: string]: ApiKey[];
@@ -155,9 +156,10 @@
 					} else if (record.provider_type === 'jira') {
 						settings = {
 							jira_url: '',
-							username: '',
-							jira_project: ''
-						};
+							project_key: '',
+							issue_type: 'Task',
+							client_mappings: []
+						} as JiraSettings;
 					}
 				}
 					
@@ -233,12 +235,9 @@
 		if (index !== -1) {
 			providers[index] = provider;
 			providers = [...providers];
-			success = 'Provider settings saved successfully';
-			error = '';
-		} else {
-			error = 'Provider not found';
-			success = '';
 		}
+		success = 'Provider settings saved successfully';
+		error = '';
 	}
 
 	async function handleToggleChange(provider: Provider) {
@@ -313,9 +312,10 @@
 			} else if (type === 'jira') {
 				settings = {
 					jira_url: '',
-					username: '',
-					jira_project: ''
-				};
+					project_key: '',
+					issue_type: 'Task',
+					client_mappings: []
+				} as JiraSettings;
 			}
 
 			const newProvider = {
@@ -571,7 +571,9 @@
 								<DigitalOceanProvider {provider} onSave={handleProviderSave} />
 							{:else if provider.provider_type === 's3'}
 								<S3Provider {provider} onSave={handleProviderSave} />
-							{:else if ['email', 'slack', 'teams', 'discord', 'telegram', 'jira'].includes(provider.provider_type)}
+							{:else if provider.provider_type === 'jira'}
+								<JiraProvider {provider} onSave={handleProviderSave} />
+							{:else if ['email', 'slack', 'teams', 'discord', 'telegram'].includes(provider.provider_type)}
 								<NotificationProvider {provider} onSave={handleProviderSave} />
 							{/if}
 						</TableBodyCell>

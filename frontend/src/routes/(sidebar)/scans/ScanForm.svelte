@@ -11,6 +11,7 @@
 	} from 'flowbite-svelte';
 	import { pocketbase } from '$lib/stores/pocketbase';
 	import type { ScanData, ScanFormData, Client } from './types';
+	import TemplateSelector from './TemplateSelector.svelte';
 
 	export let open: boolean = false; // Modal control
 	export let onSave: (scanData: ScanFormData) => void; // Function to call when saving scan
@@ -79,6 +80,9 @@
 	let scanProfiles: ScanProfile[] = [];
 	let clients: Client[] = [];
 	let nucleiProfiles: NucleiProfile[] = [];
+
+	let selectedTemplates: string[] = [];
+	let useAllTemplates: boolean = false;
 
 	// Lifecycle methods
 	onMount(async () => {
@@ -216,7 +220,9 @@
 				frequency: frequency,
 				cron: frequency === 'scheduled' ? cronSchedule : null,
 				startImmediately: shouldStart,
-				status: 'Created'
+				status: 'Created',
+				use_all_templates: useAllTemplates,
+				selected_templates: selectedTemplates
 			};
 
 			console.log('Scan data prepared:', scanData);
@@ -341,6 +347,22 @@
 						<span class="text-sm text-red-500">Please select a scan profile</span>
 					{/if}
 				</Label>
+
+				<!-- Template Selection -->
+				<div class="mt-4">
+					<Label class="block mb-2">
+						<span class="text-gray-700 dark:text-gray-400">Templates <span class="text-red-500">*</span></span>
+					</Label>
+					<TemplateSelector
+						bind:selectedTemplates
+						bind:useAllTemplates
+						on:change={({ detail }) => {
+							selectedTemplates = detail.selectedTemplates;
+							useAllTemplates = detail.useAllTemplates;
+						}}
+					/>
+				</div>
+
 				<Label class="block">
 					<span class="text-gray-700 dark:text-gray-400">Nuclei Profile <span class="text-red-500">*</span></span>
 					<Select bind:value={nucleiProfileId} required class="w-full">
@@ -355,7 +377,13 @@
 				</Label>
 				<div class="flex justify-between">
 					<Button color="alternative" on:click={previousStep}>Previous</Button>
-					<Button color="primary" on:click={nextStep} disabled={!scanProfileId || !nucleiProfileId}>Next</Button>
+					<Button 
+						color="primary" 
+						on:click={nextStep} 
+						disabled={!scanProfileId || (!useAllTemplates && selectedTemplates.length === 0)}
+					>
+						Next
+					</Button>
 				</div>
 			</div>
 		{:else if currentStep === 3}

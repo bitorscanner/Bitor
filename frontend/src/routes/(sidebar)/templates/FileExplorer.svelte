@@ -7,7 +7,16 @@
     export let onSelectFile;
     export let showToast;
 
-    let allFiles = writable([]);
+    interface FileItem {
+        name: string;
+        path: string;
+        isDir: boolean;
+        isCustom: boolean;
+        children?: FileItem[];
+        isExpanded?: boolean;
+    }
+
+    let allFiles = writable<FileItem[]>([]);
     let searchQuery = writable('');
 
     // Expose the function to set the search query
@@ -19,7 +28,7 @@
     const filteredFiles = derived([allFiles, searchQuery], ([$allFiles, $searchQuery]) => {
         if (!$searchQuery) return $allFiles;
 
-        function filterItems(items) {
+        function filterItems(items: FileItem[]): FileItem[] {
             return items
                 .map(item => {
                     if (item.isDir) {
@@ -32,7 +41,7 @@
                     }
                     return null;
                 })
-                .filter(item => item !== null);
+                .filter((item): item is FileItem => item !== null);
         }
 
         return filterItems($allFiles);
@@ -40,7 +49,7 @@
 
     async function fetchAllFiles() {
         allFiles.set([]); // Clear existing files
-        const rootItems = [];
+        const rootItems: FileItem[] = [];
 
         try {
             const token = $pocketbase.authStore.token;
@@ -93,13 +102,13 @@
         }
     }
 
-    function addIsCustomFlag(items, isCustom, parentPath = '') {
+    function addIsCustomFlag(items: FileItem[], isCustom: boolean, parentPath = ''): FileItem[] {
         if (!items) {
             return []; // Return an empty array if items is null or undefined
         }
         return items.map((item) => {
             const newPath = parentPath ? `${parentPath}/${item.name}` : item.name;
-            const newItem = {
+            const newItem: FileItem = {
                 ...item,
                 isCustom: isCustom,
                 path: newPath,
@@ -117,10 +126,10 @@
     }
 
     // Implement and export getFileByPath
-    export function getFileByPath(path: string, isCustom: boolean) {
+    export function getFileByPath(path: string, isCustom: boolean): FileItem | null {
         const files = get(allFiles);
 
-        function recursiveSearch(items) {
+        function recursiveSearch(items: FileItem[]): FileItem | null {
             for (let item of items) {
                 if (item.path === path && item.isCustom === isCustom && !item.isDir) {
                     return item;

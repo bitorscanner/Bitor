@@ -15,12 +15,18 @@ import (
 func RegisterRoutes(app *pocketbase.PocketBase, e *core.ServeEvent, ansibleBasePath string, notificationService *notification.NotificationService) {
 	log.Printf("Registering scan routes with ansible base path: %s", ansibleBasePath)
 
+	// Initialize handlers with required services
+	InitHandlers(app, ansibleBasePath, notificationService)
+
 	// Create a group for the scan routes with the authentication middleware
 	scanGroup := e.Router.Group("/api/scan",
 		apis.LoadAuthContext(app),     // Apply LoadAuthContext middleware first
 		auth.RequireAuthOrAPIKey(app), // Use the custom middleware from the auth package
 		apis.ActivityLogger(app),      // Optional: log activities
 	)
+
+	// Register test notification endpoint
+	scanGroup.POST("/test-notification", HandleTestNotification)
 
 	// Register scan routes
 	scanGroup.POST("/start", handlers.HandleStartAndGenerateScan(app, ansibleBasePath, notificationService))

@@ -1,8 +1,11 @@
+{# Only include the tag section if vm.tags exists and is not empty #}
+{% if vm.tags and vm.tags.strip() %}
 {% for tag in vm.tags.split(',') %}
 resource "digitalocean_tag" "{{ tag | trim | lower | replace(' ', '_') }}" {
   name = "{{ tag | trim }}"
 }
 {% endfor %}
+{% endif %}
 
 resource "tls_private_key" "ssh_key" {
   algorithm = "RSA"
@@ -19,7 +22,9 @@ resource "digitalocean_droplet" "vm" {
   name = "{{ 'vm-' + scan_id }}"
   region = "{{ vm.do_region|default(vm_default_do_region) }}"
   size = "{{ vm.do_size|default(vm_default_do_size) }}"
+  {% if vm.tags and vm.tags.strip() %}
   tags = [{% for tag in vm.tags.split(',') %}digitalocean_tag.{{ tag | trim | lower | replace(' ', '_') }}.id,{% endfor %}]
+  {% endif %}
   user_data = "${file("cloud-init-do.yaml")}"
   ssh_keys = [
     digitalocean_ssh_key.terraform_ssh_key.fingerprint

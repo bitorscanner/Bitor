@@ -82,7 +82,7 @@ func initNotificationService(app *pocketbase.PocketBase) (*notification.Notifica
 	if err != nil {
 		// If collection doesn't exist, just return empty config
 		if err.Error() == "sql: no rows in result set" {
-			notificationService, err := notification.NewNotificationService(&config)
+			notificationService, err := notification.NewNotificationService(app, &config)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create notification service: %v", err)
 			}
@@ -151,7 +151,7 @@ func initNotificationService(app *pocketbase.PocketBase) (*notification.Notifica
 	}
 
 	// Create notification service
-	notificationService, err := notification.NewNotificationService(&config)
+	notificationService, err := notification.NewNotificationService(app, &config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create notification service: %v", err)
 	}
@@ -282,7 +282,69 @@ func initializePublicSettings(app *pocketbase.PocketBase) error {
 	return nil
 }
 
+// Setup performs initial setup tasks
+func Setup(app *pocketbase.PocketBase) error {
+	// Initialize notification service
+	notificationService, err := initNotificationService(app)
+	if err != nil {
+		log.Printf("Warning: Failed to initialize notification service: %v", err)
+		// Continue setup even if notification service fails
+	} else {
+		// Store the notification service in the app's store for later use
+		app.Store().Set("notificationService", notificationService)
+	}
+
+	// Get the ansible base path from environment or use default
+	if envPath := os.Getenv("ANSIBLE_BASE_PATH"); envPath != "" {
+		// Convert to absolute path if it's not already
+		if !filepath.IsAbs(envPath) {
+			if absPath, err := filepath.Abs(envPath); err == nil {
+				ansibleBasePath = absPath
+			} else {
+				ansibleBasePath = envPath
+			}
+		} else {
+			ansibleBasePath = envPath
+		}
+	} else {
+		// Use default path
+		workspaceRoot, err := filepath.Abs(filepath.Join("..", ""))
+		if err != nil {
+			log.Printf("Error getting workspace root: %v", err)
+			// Always use ansible in current directory
+			ansibleBasePath = "ansible"
+		} else {
+			// Use absolute path
+			ansibleBasePath = filepath.Join(workspaceRoot, "ansible")
+		}
+	}
+
+	log.Printf("Using ansible base path in setup: %s", ansibleBasePath)
+
+	// Ensure ansible base path exists
+	if _, err := os.Stat(ansibleBasePath); os.IsNotExist(err) {
+		log.Printf("Creating ansible base path: %s", ansibleBasePath)
+		if err := os.MkdirAll(ansibleBasePath, 0755); err != nil {
+			log.Printf("Failed to create ansible base path: %v", err)
+			return err
+		}
+	}
+
+	return nil
+}
+
+// InitializeApp initializes the application
 func InitializeApp(app *pocketbase.PocketBase) error {
+	// Initialize notification service
+	notificationService, err := initNotificationService(app)
+	if err != nil {
+		log.Printf("Warning: Failed to initialize notification service: %v", err)
+		// Continue initialization even if notification service fails
+	} else {
+		// Store the notification service in the app's store for later use
+		app.Store().Set("notificationService", notificationService)
+	}
+
 	// Bootstrap the app (initializes the database)
 	if err := app.Bootstrap(); err != nil {
 		return err
@@ -347,46 +409,6 @@ func InitializeApp(app *pocketbase.PocketBase) error {
 
 		return nil
 	})
-
-	return nil
-}
-
-func Setup(app *pocketbase.PocketBase) error {
-	// Get the ansible base path from environment or use default
-	if envPath := os.Getenv("ANSIBLE_BASE_PATH"); envPath != "" {
-		// Convert to absolute path if it's not already
-		if !filepath.IsAbs(envPath) {
-			if absPath, err := filepath.Abs(envPath); err == nil {
-				ansibleBasePath = absPath
-			} else {
-				ansibleBasePath = envPath
-			}
-		} else {
-			ansibleBasePath = envPath
-		}
-	} else {
-		// Use default path
-		workspaceRoot, err := filepath.Abs(filepath.Join("..", ""))
-		if err != nil {
-			log.Printf("Error getting workspace root: %v", err)
-			// Always use ansible in current directory
-			ansibleBasePath = "ansible"
-		} else {
-			// Use absolute path
-			ansibleBasePath = filepath.Join(workspaceRoot, "ansible")
-		}
-	}
-
-	log.Printf("Using ansible base path in setup: %s", ansibleBasePath)
-
-	// Ensure ansible base path exists
-	if _, err := os.Stat(ansibleBasePath); os.IsNotExist(err) {
-		log.Printf("Creating ansible base path: %s", ansibleBasePath)
-		if err := os.MkdirAll(ansibleBasePath, 0755); err != nil {
-			log.Printf("Failed to create ansible base path: %v", err)
-			return err
-		}
-	}
 
 	return nil
 }

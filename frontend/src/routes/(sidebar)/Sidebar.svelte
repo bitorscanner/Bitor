@@ -108,11 +108,10 @@
 					href: '/settings/providers',
 					icon: ServerSolid
 				},
-				// Commenting out notifications for beta release as feature is not complete
-				// 'Notifications': {
-				// 	href: '/settings/notifications',
-				// 	icon: BellSolid
-				// },
+				'Notifications': {
+					href: '/settings/notifications',
+					icon: BellSolid
+				},
 				'System': {
 					href: '/settings/system',
 					icon: CogSolid

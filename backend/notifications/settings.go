@@ -81,6 +81,41 @@ func EnsureNotificationsCollection(app *pocketbase.PocketBase) error {
 				Type:     schema.FieldTypeText,
 				Required: false,
 			},
+			&schema.SchemaField{
+				Name:     "jira_enabled",
+				Type:     schema.FieldTypeBool,
+				Required: true,
+			},
+			&schema.SchemaField{
+				Name:     "jira_url",
+				Type:     schema.FieldTypeText,
+				Required: false,
+			},
+			&schema.SchemaField{
+				Name:     "jira_username",
+				Type:     schema.FieldTypeText,
+				Required: false,
+			},
+			&schema.SchemaField{
+				Name:     "jira_api_token",
+				Type:     schema.FieldTypeText,
+				Required: false,
+			},
+			&schema.SchemaField{
+				Name:     "jira_project_key",
+				Type:     schema.FieldTypeText,
+				Required: false,
+			},
+			&schema.SchemaField{
+				Name:     "jira_issue_type",
+				Type:     schema.FieldTypeText,
+				Required: false,
+			},
+			&schema.SchemaField{
+				Name:     "jira_template",
+				Type:     schema.FieldTypeText,
+				Required: false,
+			},
 		),
 	}
 
