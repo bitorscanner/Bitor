@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { pocketbase } from '$lib/stores/pocketbase';
+    import { pocketbase } from '@lib/stores/pocketbase';
     import {
       Card,
       Heading,
@@ -15,10 +15,12 @@
       Label,
       Alert,
       Toast,
+      Dropdown,
+      DropdownItem,
     } from 'flowbite-svelte';
     import FindingModal from './FindingModal.svelte';
     import BulkCommentModal from './BulkCommentModal.svelte';
-    import { CheckCircleSolid } from 'flowbite-svelte-icons';
+    import { CheckCircleSolid, DotsVerticalOutline } from 'flowbite-svelte-icons';
   
     interface Finding {
       id: string;
@@ -827,6 +829,31 @@
         }, 3000);
       }
     }
+
+    function exportHostsFromGroup(group: GroupedFindings) {
+      // Extract unique hosts and IPs from the group
+      const hostData = group.findings.map(finding => `${finding.host},${finding.ip}`);
+      const uniqueHostData = [...new Set(hostData)];
+      
+      // Create CSV content
+      const csvContent = 'Host,IP\n' + uniqueHostData.join('\n');
+      
+      // Create blob and download
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `hosts-${group.template_id}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    }
+
+    // Fix the loadFindings reference
+    async function refreshFindings() {
+      await fetchGroupedFindings();
+    }
   </script>
   
   <Card size="xl" class="shadow-sm max-w-none">
@@ -1067,6 +1094,18 @@
                       N/A
                     {/if}
                   </span>
+                  <!-- Dropdown menu for actions -->
+                  <div class="relative">
+                    <Button size="xs" class="!p-1">
+                      <DotsVerticalOutline class="w-4 h-4" />
+                    </Button>
+                    <Dropdown class="w-48" placement="bottom">
+                      <DropdownItem on:click={() => exportHostsFromGroup(group)}>
+                        Export Hosts
+                      </DropdownItem>
+                      <!-- Add more dropdown items here as needed -->
+                    </Dropdown>
+                  </div>
                 </div>
               </div>
   
@@ -1174,7 +1213,7 @@
       finding={selectedFinding} 
       on:findingUpdated={async () => {
         // Refresh the findings list
-        await loadFindings();
+        await refreshFindings();
       }}
     />
   {/if}

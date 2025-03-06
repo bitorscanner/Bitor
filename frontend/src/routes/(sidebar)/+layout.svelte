@@ -4,7 +4,7 @@
 	import Sidebar from './Sidebar.svelte';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { pocketbase } from '$lib/stores/pocketbase';
+	import { pocketbase } from '@lib/stores/pocketbase';
 	import { page } from '$app/stores';
 
 	let drawerHidden = false;

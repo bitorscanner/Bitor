@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Modal, Button, Toggle, Select } from 'flowbite-svelte';
   import { Accordion, AccordionItem } from 'flowbite-svelte';
-  import { pocketbase } from '$lib/stores/pocketbase';
+  import { pocketbase } from '@lib/stores/pocketbase';
   import { createEventDispatcher, onDestroy, onMount } from 'svelte';
   // Import Xterm components and types
   import { Xterm, XtermAddon } from '@battlefieldduck/xterm-svelte';
@@ -130,7 +130,7 @@
     if (finding) {
       try {
         console.log('Fetching notes for finding ID:', finding.id);
-        const record = await $pocketbase.collection('nuclei_results').getOne(finding.id);
+        const record = await $pocketbase.collection('nuclei_findings').getOne(finding.id);
         console.log('Fetched record:', record);
         if (record.notes) {
           notesContent = record.notes;
@@ -237,7 +237,7 @@
   async function toggleAcknowledged() {
     if (finding) {
       try {
-        const updatedFinding = await $pocketbase.collection('nuclei_results').update(finding.id, {
+        const updatedFinding = await $pocketbase.collection('nuclei_findings').update(finding.id, {
           acknowledged: finding.acknowledged,
         });
         console.log('Acknowledged status updated:', updatedFinding);
@@ -253,7 +253,7 @@
   async function toggleFalsePositive() {
     if (finding) {
       try {
-        const updatedFinding = await $pocketbase.collection('nuclei_results').update(finding.id, {
+        const updatedFinding = await $pocketbase.collection('nuclei_findings').update(finding.id, {
           false_positive: finding.false_positive,
         });
         console.log('False positive status updated:', updatedFinding);
@@ -269,7 +269,7 @@
   async function toggleRemediated() {
     if (finding) {
       try {
-        await $pocketbase.collection('nuclei_results').update(finding.id, {
+        await $pocketbase.collection('nuclei_findings').update(finding.id, {
           remediated: finding.remediated
         });
         dispatch('findingUpdated', finding);
@@ -304,7 +304,7 @@
     if (finding) {
       try {
         // Save the notesContent back to the backend
-        await $pocketbase.collection('nuclei_results').update(finding.id, {
+        await $pocketbase.collection('nuclei_findings').update(finding.id, {
           notes: notesContent,
         });
         // Update the local finding object
@@ -416,7 +416,7 @@
         severity_override_order: severityOrder
       };
       
-      await $pocketbase.collection('nuclei_results').update(finding.id, data);
+      await $pocketbase.collection('nuclei_findings').update(finding.id, data);
       finding.severity_override = newSeverity;
       finding.severity_override_order = severityOrder;
       saveMessage = 'Severity override updated successfully';
@@ -640,7 +640,7 @@
             </div>
             <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
               <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Matched At</p>
-              <p class="text-gray-900 dark:text-white">{formatDate(finding.matched_at)}</p>
+              <p class="text-gray-900 dark:text-white">{finding.matched_at}</p>
             </div>
             <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
               <p class="text-sm font-medium text-gray-500 dark:text-gray-400">First Seen</p>

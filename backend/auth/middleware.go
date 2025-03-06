@@ -18,20 +18,20 @@ type ScanRequest struct {
 func RequireAuthOrAPIKey(app *pocketbase.PocketBase) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
+			// Get the authorization header
+			authHeader := c.Request().Header.Get("Authorization")
+
 			admin, _ := c.Get(apis.ContextAdminKey).(*models.Admin)
 			record, _ := c.Get(apis.ContextAuthRecordKey).(*models.Record)
 
 			if admin != nil {
-				log.Println("Authenticated via admin session")
 				return next(c)
 			}
 			if record != nil {
-				log.Println("Authenticated via user session")
 				return next(c)
 			}
 
 			// Check for Bearer token
-			authHeader := c.Request().Header.Get("Authorization")
 			if strings.HasPrefix(authHeader, "Bearer ") {
 				token := strings.TrimPrefix(authHeader, "Bearer ")
 
@@ -39,7 +39,6 @@ func RequireAuthOrAPIKey(app *pocketbase.PocketBase) echo.MiddlewareFunc {
 				admin, err := app.Dao().FindAdminByToken(token, app.Settings().RecordAuthToken.Secret)
 				if err == nil && admin != nil {
 					c.Set(apis.ContextAdminKey, admin)
-					log.Println("Authenticated via admin token")
 					return next(c)
 				}
 
@@ -47,7 +46,6 @@ func RequireAuthOrAPIKey(app *pocketbase.PocketBase) echo.MiddlewareFunc {
 				record, err := app.Dao().FindAuthRecordByToken(token, app.Settings().RecordAuthToken.Secret)
 				if err == nil && record != nil {
 					c.Set(apis.ContextAuthRecordKey, record)
-					log.Println("Authenticated via user token")
 					return next(c)
 				}
 			}
@@ -71,11 +69,9 @@ func RequireAuthOrAPIKey(app *pocketbase.PocketBase) echo.MiddlewareFunc {
 					// Compare the token to the record's api_key
 					apiKey := scan.GetString("api_key")
 					if apiKey != "" && apiKey == strings.TrimPrefix(authHeader, "Bearer ") {
-						log.Println("Authenticated via scan API key")
 						return next(c)
 					}
 				}
-				log.Println("API key authentication failed")
 			}
 
 			return c.JSON(http.StatusUnauthorized, map[string]interface{}{

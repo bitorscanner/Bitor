@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Button, Modal } from 'flowbite-svelte';
 	import { ExclamationCircleOutline } from 'flowbite-svelte-icons';
-	import { pocketbase } from '$lib/stores/pocketbase'; // Import the pocketbase instance
+	import { pocketbase } from '@lib/stores/pocketbase'; // Import the pocketbase instance
 	import { goto } from '$app/navigation'; // Import the goto function
 	export let open: boolean = false; // modal control
 	export let userId: string; // The ID of the user to delete

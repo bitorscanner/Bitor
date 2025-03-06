@@ -4,7 +4,7 @@
   import Logo from '$lib/components/Logo.svelte';
   import { Alert } from 'flowbite-svelte';
   import { ExclamationCircleSolid } from 'flowbite-svelte-icons';
-  import { pocketbase } from '$lib/stores/pocketbase';
+  import { pocketbase } from '@lib/stores/pocketbase';
 
   let token = '';
   let username = '';

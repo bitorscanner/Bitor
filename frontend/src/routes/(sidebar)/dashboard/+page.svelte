@@ -1,11 +1,11 @@
 <script lang="ts">
-	import RunningScans from '../../utils/dashboard/RunningScans.svelte';
-	import CompletedScans from '../../utils/dashboard/CompletedScans.svelte';
-	import FailedScans from '../../utils/dashboard/FailedScans.svelte';
-	import OpenVulnerabilitiesChart from '../../utils/dashboard/OpenVulnerabilitiesChart.svelte';
-	import VulnerabilitiesByClient from '../../utils/dashboard/VulnerabilitiesByClient.svelte';
-	import RecentFindings from '../../utils/dashboard/RecentFindings.svelte';
-	import MetaTag from '../../utils/MetaTag.svelte';
+	import RunningScans from '@utils/dashboard/RunningScans.svelte';
+	import CompletedScans from '@utils/dashboard/CompletedScans.svelte';
+	import FailedScans from '@utils/dashboard/FailedScans.svelte';
+	import OpenVulnerabilitiesChart from '@utils/dashboard/OpenVulnerabilitiesChart.svelte';
+	import VulnerabilitiesByClient from '@utils/dashboard/VulnerabilitiesByClient.svelte';
+	import RecentFindings from '@utils/dashboard/RecentFindings.svelte';
+	import MetaTag from '@utils/MetaTag.svelte';
 	import Footer from '../Footer.svelte';
 
 	const path: string = '/dashboard';

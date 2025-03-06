@@ -16,6 +16,7 @@ type NucleiFinding struct {
 	Scheme           string   `json:"scheme"`
 	URL              string   `json:"url"`
 	MatchedAt        string   `json:"matched-at"`
+	MatcherName      string   `json:"matcher-name"`
 	ExtractedResults []string `json:"extracted-results"`
 	Request          string   `json:"request"`
 	Response         string   `json:"response"`

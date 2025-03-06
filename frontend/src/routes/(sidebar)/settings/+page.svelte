@@ -8,7 +8,7 @@
 		UserCircleSolid,
 	} from 'flowbite-svelte-icons';
 	import { goto } from '$app/navigation';
-	import { pocketbase } from '$lib/stores/pocketbase';
+	import { pocketbase } from '@lib/stores/pocketbase';
 	import { currentUser } from '$lib/stores/auth';
 
 	$: userPermissions = $currentUser?.group?.permissions || {};

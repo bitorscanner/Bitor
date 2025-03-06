@@ -1,10 +1,11 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { Card, Button, Toggle, Input, Label, Toast, Breadcrumb, BreadcrumbItem } from 'flowbite-svelte';
-  import { pocketbase } from '$lib/stores/pocketbase';
+  import { Card, Button, Toggle, Input, Label, Toast, Breadcrumb, BreadcrumbItem, Select } from 'flowbite-svelte';
+  import { pocketbase } from '@lib/stores/pocketbase';
   import { CheckCircleSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
   import { goto } from '$app/navigation';
   import UpdateNotification from '$lib/components/UpdateNotification.svelte';
+  import MigrationProgress from '$lib/components/MigrationProgress.svelte';
 
   interface Settings {
     scan_concurrency: number;
@@ -23,6 +24,11 @@
     smtp_encryption: string;
     app_name: string;
     app_url: string;
+  }
+
+  interface Client {
+    id: string;
+    name: string;
   }
 
   let settings: Settings = {
@@ -49,6 +55,8 @@
   let showToast = false;
   let isError = false;
   let isSuperAdmin = false;
+  let selectedClientId = '';
+  let clients: Client[] = [];
 
   function handleToggle(event: CustomEvent<boolean>, key: keyof Settings) {
     if (typeof settings[key] === 'boolean') {
@@ -99,6 +107,22 @@
           }
         } catch (err) {
           console.log('Error fetching mail settings:', err);
+        }
+      }
+
+      // Fetch clients
+      if (isSuperAdmin) {
+        try {
+          const clientRecords = await $pocketbase.collection('clients').getFullList();
+          clients = clientRecords.map(client => ({
+            id: client.id,
+            name: client.name
+          }));
+        } catch (err) {
+          console.error('Error fetching clients:', err);
+          saveMessage = 'Error loading clients';
+          isError = true;
+          showToast = true;
         }
       }
     } catch (error: any) {
@@ -181,6 +205,65 @@
         return;
       }
       saveMessage = error?.data?.message || 'Error saving settings';
+      isError = true;
+    }
+    showToast = true;
+    setTimeout(() => {
+      showToast = false;
+    }, 3000);
+  }
+
+  async function deleteClientFindings() {
+    try {
+      if (selectedClientId) {
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/findings/client/${selectedClientId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${$pocketbase.authStore.token}`,
+          },
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to delete findings');
+        }
+
+        saveMessage = 'All findings for the selected client have been deleted';
+        isError = false;
+      } else {
+        saveMessage = 'Please select a client';
+        isError = true;
+      }
+    } catch (error: any) {
+      console.error('Error deleting findings:', error);
+      saveMessage = error?.message || 'Error deleting findings';
+      isError = true;
+    }
+    showToast = true;
+    setTimeout(() => {
+      showToast = false;
+    }, 3000);
+  }
+
+  async function deleteOrphanedFindings() {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/findings/orphaned`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${$pocketbase.authStore.token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete orphaned findings');
+      }
+
+      saveMessage = 'All orphaned findings have been deleted';
+      isError = false;
+    } catch (error: any) {
+      console.error('Error deleting orphaned findings:', error);
+      saveMessage = error?.message || 'Error deleting orphaned findings';
       isError = true;
     }
     showToast = true;
@@ -323,6 +406,18 @@
       </Card>
 
       {#if isSuperAdmin}
+        <!-- Migration Card -->
+        <Card>
+          <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Findings Migration</h2>
+          <div class="space-y-4">
+            <p class="text-gray-600 dark:text-gray-400">
+              Migrate findings to the new format with hash generation and history tracking.
+              This process can be safely rerun if needed.
+            </p>
+            <MigrationProgress />
+          </div>
+        </Card>
+
         <!-- Email Settings -->
         <Card>
           <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Email Settings</h2>
@@ -440,6 +535,38 @@
               <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
                 The base URL of your application (used for email links)
               </p>
+            </div>
+          </div>
+        </Card>
+
+        <!-- Super Admin Settings -->
+        <Card>
+          <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Super Admin Settings</h2>
+          <div class="space-y-4">
+            <div>
+              <Label for="client_select" class="mb-2">Select Client</Label>
+              <Select id="client_select" bind:value={selectedClientId} class="w-full">
+                <option value="">Select a client</option>
+                {#each clients as client}
+                  <option value={client.id}>{client.name}</option>
+                {/each}
+              </Select>
+            </div>
+
+            <div class="flex flex-col gap-4">
+              <Button 
+                color="red" 
+                disabled={!selectedClientId} 
+                on:click={deleteClientFindings}
+              >
+                Delete All Findings
+              </Button>
+              <Button 
+                color="red" 
+                on:click={deleteOrphanedFindings}
+              >
+                Delete Orphaned Findings
+              </Button>
             </div>
           </div>
         </Card>

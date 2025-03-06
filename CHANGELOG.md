@@ -5,9 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.5.3] - 2024-03-28
 
 ### Added
+- Added Attack Surface Management module (currently disabled for beta)
+- Added improved cost tracking for cloud resources
+- Added real-time cost calculation for running scans
+- Added support for multiple cloud providers in scan infrastructure
 - Added support for bulk updates of findings status (acknowledged, false positive, remediated)
 - Added API key authentication for scan results submission
 - Added chunked file upload support for large scan results
@@ -30,16 +34,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Subdomain takeovers
   - Windows security auditing
   - WordPress security
+- Added automatic migration for existing findings to support new hash-based deduplication:
+  - Generates hashes for all existing findings
+  - Creates history entries for proper tracking
+  - Preserves all existing data and relationships
+  - Handles duplicate findings by updating history entries
+  - Migration runs automatically on application startup
 
 ### Changed
+- Optimized scan cost calculations to reduce unnecessary API calls
+- Improved precision in cost display and calculations
+- Enhanced UI responsiveness for scan management
+- Updated scan status display with more detailed information
 - Improved findings page performance with optimized database queries
 - Enhanced findings filtering and sorting capabilities
 - Updated authentication middleware to support both user sessions and API keys
 - Improved error handling in scan result processing
 - Enhanced scan status tracking and updates
 - Improved file upload handling with progress tracking
+- Changed findings storage to use hash-based deduplication for better tracking and history
 
 ### Fixed
+- Fixed cost calculation precision issues for small amounts
+- Fixed duplicate UI elements in scan management
+- Fixed issues with scan status updates
+- Fixed template directory handling in Nuclei scans
 - Fixed findings bulk update endpoint path
 - Fixed permission checks for admin users
 - Fixed scan scheduling validation
@@ -60,6 +79,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated `NotifyScanFinished` to respect notification rules
   - Added logging for notification rule matching and channel selection
   - Removed hardcoded channel lists from notification methods
+
+### Migration Notes
+- When upgrading to 0.5.3, the application will automatically:
+  1. Add hashes to all existing findings in nuclei_results
+  2. Create corresponding entries in nuclei_findings_history
+  3. Update scan rollups as needed
+  4. No manual intervention required
+  5. No data loss will occur during migration
 
 ## [0.5.2] - 2024-03-27
 

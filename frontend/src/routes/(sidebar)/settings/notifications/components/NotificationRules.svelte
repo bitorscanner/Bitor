@@ -22,7 +22,7 @@
         SiJira,
         SiTelegram
     } from '@icons-pack/svelte-simple-icons';
-    import { pocketbase } from '$lib/stores/pocketbase';
+    import { pocketbase } from '@lib/stores/pocketbase';
 
     export let rules: Array<{
         id: string;

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { pocketbase } from '$lib/stores/pocketbase';
+  import { pocketbase } from '@lib/stores/pocketbase';
   import {
     Table,
     TableBody,
@@ -13,54 +13,63 @@
     Button
   } from 'flowbite-svelte';
   import FindingModal from './FindingModal.svelte';
+  import { page } from '$app/stores';
+  import { goto } from '$app/navigation';
 
   interface Finding {
-    info: {
-      name: string;
-      tags: string[];
-    };
-    host: string;
-    ip: string;
-    template_id: string;
+    id: string;
+    name: string;
+    description: string;
     severity: string;
-    client: {
-      name: string;
-      favicon?: string;
-    };
-    timestamp: string;
+    type: string;
+    tool: string;
+    host: string;
+    status: string;
+    client: string;
+    hash: string;
+    scan_ids: string[];
   }
 
   let findings: Finding[] = [];
-  let selectedFinding = null;
+  let selectedFinding: Finding | null = null;
   let showModal = false;
   let currentPage = 1;
   const itemsPerPage = 10;
   let sortField = '';
   let sortDirection = 'asc';
+  let totalPages = 1;
+  let totalItems = 0;
+  let loading = true;
+  let error = '';
 
   // Fetch data from PocketBase
   async function fetchFindings(page = 1, sortField = '', sortDirection = 'asc') {
     try {
-      const result = await $pocketbase.collection('nuclei_results').getList(page, itemsPerPage, {
+      const result = await $pocketbase.collection('nuclei_findings').getList(page, itemsPerPage, {
         sort: `${sortDirection === 'asc' ? '' : '-'}${sortField}`
       });
-      const findingsWithClients = await Promise.all(
-        result.items.map(async (item) => {
-          const client = await $pocketbase.collection('clients').getOne(item.client);
-          return {
-            ...item,
-            client: client
-          };
-        })
-      );
 
-      if (page === 1) {
-        findings = findingsWithClients;
-      } else {
-        findings = findings.concat(findingsWithClients);
-      }
-    } catch (error) {
-      console.error('Error fetching findings:', error);
+      findings = result.items.map(item => ({
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        severity: item.severity,
+        type: item.type,
+        tool: item.tool,
+        host: item.host,
+        status: item.status,
+        client: item.client,
+        hash: item.hash,
+        scan_ids: item.scan_ids || []
+      }));
+
+      totalPages = result.totalPages;
+      totalItems = result.totalItems;
+      currentPage = page;
+      loading = false;
+    } catch (e) {
+      error = e.message;
+      loading = false;
     }
   }
 
@@ -119,23 +128,23 @@
     class="mt-6 min-w-full divide-y divide-gray-200 dark:divide-gray-600"
   >
   <TableHead class="bg-gray-50 dark:bg-gray-700">
-    <TableHeadCell on:click={() => sortData('info.name')}>
-      Name {#if sortField === 'info.name'}{sortDirection === 'asc' ? '▲' : '▼'}{/if}
+    <TableHeadCell on:click={() => sortData('name')}>
+      Name {#if sortField === 'name'}{sortDirection === 'asc' ? '▲' : '▼'}{/if}
     </TableHeadCell>
     <TableHeadCell on:click={() => sortData('host')}>
       Host {#if sortField === 'host'}{sortDirection === 'asc' ? '▲' : '▼'}{/if}
     </TableHeadCell>
-    <TableHeadCell on:click={() => sortData('ip')}>
-      IP Address {#if sortField === 'ip'}{sortDirection === 'asc' ? '▲' : '▼'}{/if}
+    <TableHeadCell on:click={() => sortData('id')}>
+      ID {#if sortField === 'id'}{sortDirection === 'asc' ? '▲' : '▼'}{/if}
     </TableHeadCell>
-    <TableHeadCell on:click={() => sortData('template_id')}>
-      Template ID {#if sortField === 'template_id'}{sortDirection === 'asc' ? '▲' : '▼'}{/if}
+    <TableHeadCell on:click={() => sortData('type')}>
+      Type {#if sortField === 'type'}{sortDirection === 'asc' ? '▲' : '▼'}{/if}
     </TableHeadCell>
     <TableHeadCell on:click={() => sortData('severity')}>
       Severity {#if sortField === 'severity'}{sortDirection === 'asc' ? '▲' : '▼'}{/if}
     </TableHeadCell>
-    <TableHeadCell on:click={() => sortData('info.tags')}>
-      Tags {#if sortField === 'info.tags'}{sortDirection === 'asc' ? '▲' : '▼'}{/if}
+    <TableHeadCell on:click={() => sortData('scan_ids')}>
+      Scan IDs {#if sortField === 'scan_ids'}{sortDirection === 'asc' ? '▲' : '▼'}{/if}
     </TableHeadCell>
     <TableHeadCell>
         Client
@@ -147,13 +156,13 @@
     <TableBody>
       {#each findings.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage) as finding}
         <TableBodyRow on:click={() => openModal(finding)}>
-          <TableBodyCell class="px-4 font-normal">{finding.info.name}</TableBodyCell>
+          <TableBodyCell class="px-4 font-normal">{finding.name}</TableBodyCell>
           <TableBodyCell class="px-4 font-normal text-gray-500 dark:text-gray-400">
             {finding.host}
           </TableBodyCell>
-          <TableBodyCell class="px-4">{finding.ip}</TableBodyCell>
+          <TableBodyCell class="px-4">{finding.id}</TableBodyCell>
           <TableBodyCell class="px-4 font-normal text-gray-500 dark:text-gray-400">
-            {finding.template_id}
+            {finding.type}
           </TableBodyCell>
           <TableBodyCell class="px-4 font-normal">
             <span class={`inline-block px-2 py-1 rounded ${getSeverityColor(finding.severity)}`}>
@@ -161,18 +170,13 @@
             </span>
           </TableBodyCell>
           <TableBodyCell class="px-4 font-normal">
-            {#each finding.info.tags as tag}
-              <span class="inline-block bg-gray-200 text-gray-800 text-xs px-2 py-1 rounded-full mr-1">{tag}</span>
+            {#each finding.scan_ids as scanId}
+              <span class="inline-block bg-gray-200 text-gray-800 text-xs px-2 py-1 rounded-full mr-1">{scanId}</span>
             {/each}
           </TableBodyCell>
           <TableBodyCell class="px-4 font-normal">
             {#if finding.client}
-              <div class="flex items-center gap-2">
-                {#if finding.client.favicon}
-                  <img src={$pocketbase.getFileUrl(finding.client, finding.client.favicon)} alt="{finding.client.name} Favicon" class="h-4 w-4" />
-                {/if}
-                {finding.client.name}
-              </div>
+              {finding.client}
             {:else}
               N/A
             {/if}

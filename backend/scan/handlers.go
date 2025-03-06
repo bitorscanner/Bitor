@@ -5,28 +5,29 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"orbit/models"
 	"orbit/services"
 	"orbit/services/notification"
 	"time"
 
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
-	"github.com/pocketbase/pocketbase/models"
+	pbModels "github.com/pocketbase/pocketbase/models"
 )
 
 var (
-	app                 *pocketbase.PocketBase
+	pb                  *pocketbase.PocketBase
 	notificationService *notification.NotificationService
 	findingManager      *services.FindingManager
 	notificationManager *services.NotificationManager
 )
 
 // InitHandlers initializes the scan handlers with required services
-func InitHandlers(pb *pocketbase.PocketBase, ansibleBasePath string, ns *notification.NotificationService) {
-	app = pb
+func InitHandlers(pocketBase *pocketbase.PocketBase, ansibleBasePath string, ns *notification.NotificationService) {
+	pb = pocketBase
 	notificationService = ns
-	findingManager = services.NewFindingManager(app, notificationService)
-	notificationManager = services.NewNotificationManager(app, notificationService)
+	findingManager = services.NewFindingManager(pb, notificationService)
+	notificationManager = services.NewNotificationManager(pb, notificationService)
 }
 
 // HandleScanStarted processes a scan start event
@@ -34,13 +35,13 @@ func HandleScanStarted(scanID string) error {
 	ctx := context.Background()
 
 	// Get scan details
-	scan, err := app.Dao().FindRecordById("nuclei_scans", scanID)
+	scan, err := pb.Dao().FindRecordById("nuclei_scans", scanID)
 	if err != nil {
 		return fmt.Errorf("failed to get scan: %v", err)
 	}
 
 	// Get client details
-	client, err := app.Dao().FindRecordById("clients", scan.GetString("client"))
+	client, err := pb.Dao().FindRecordById("clients", scan.GetString("client"))
 	if err != nil {
 		return fmt.Errorf("failed to get client: %v", err)
 	}
@@ -65,32 +66,13 @@ func HandleScanStarted(scanID string) error {
 	return nil
 }
 
-// HandleFinding processes a new finding
-func HandleFinding(scanID string, finding map[string]interface{}) error {
-	ctx := context.Background()
-
-	// Get scan details
-	scan, err := app.Dao().FindRecordById("nuclei_scans", scanID)
+// HandleFinding processes a finding and sends notifications if needed
+func HandleFinding(app *pocketbase.PocketBase, finding *models.Finding, notificationService *notification.NotificationService) error {
+	// Process the finding (deduplication and rollup)
+	findingManager := services.NewFindingManager(app, notificationService)
+	_, err := findingManager.ProcessFinding(finding)
 	if err != nil {
-		return fmt.Errorf("failed to get scan: %v", err)
-	}
-
-	// Create Finding object
-	f := services.Finding{
-		Title:       finding["title"].(string),
-		Description: finding["description"].(string),
-		Severity:    finding["severity"].(string),
-		Target:      finding["target"].(string),
-		Type:        finding["type"].(string),
-		Tool:        scan.GetString("tool"),
-		ScanID:      scanID,
-		ClientID:    scan.GetString("client"),
-		Raw:         finding,
-	}
-
-	// Process finding
-	if err := findingManager.HandleFinding(ctx, f); err != nil {
-		return fmt.Errorf("failed to handle finding: %v", err)
+		return err
 	}
 
 	return nil
@@ -101,13 +83,13 @@ func HandleScanFinished(scanID string) error {
 	ctx := context.Background()
 
 	// Get scan details
-	scan, err := app.Dao().FindRecordById("nuclei_scans", scanID)
+	scan, err := pb.Dao().FindRecordById("nuclei_scans", scanID)
 	if err != nil {
 		return fmt.Errorf("failed to get scan: %v", err)
 	}
 
 	// Get client details
-	client, err := app.Dao().FindRecordById("clients", scan.GetString("client"))
+	client, err := pb.Dao().FindRecordById("clients", scan.GetString("client"))
 	if err != nil {
 		return fmt.Errorf("failed to get client: %v", err)
 	}
@@ -151,13 +133,13 @@ func HandleScanFailed(scanID string, errorMsg string) error {
 	ctx := context.Background()
 
 	// Get scan details
-	scan, err := app.Dao().FindRecordById("nuclei_scans", scanID)
+	scan, err := pb.Dao().FindRecordById("nuclei_scans", scanID)
 	if err != nil {
 		return fmt.Errorf("failed to get scan: %v", err)
 	}
 
 	// Get client details
-	client, err := app.Dao().FindRecordById("clients", scan.GetString("client"))
+	client, err := pb.Dao().FindRecordById("clients", scan.GetString("client"))
 	if err != nil {
 		return fmt.Errorf("failed to get client: %v", err)
 	}
@@ -186,13 +168,13 @@ func HandleScanStopped(scanID string) error {
 	ctx := context.Background()
 
 	// Get scan details
-	scan, err := app.Dao().FindRecordById("nuclei_scans", scanID)
+	scan, err := pb.Dao().FindRecordById("nuclei_scans", scanID)
 	if err != nil {
 		return fmt.Errorf("failed to get scan: %v", err)
 	}
 
 	// Get client details
-	client, err := app.Dao().FindRecordById("clients", scan.GetString("client"))
+	client, err := pb.Dao().FindRecordById("clients", scan.GetString("client"))
 	if err != nil {
 		return fmt.Errorf("failed to get client: %v", err)
 	}
@@ -234,7 +216,7 @@ func HandleTestNotification(c echo.Context) error {
 
 	// If no scan ID is provided, create a temporary test scan
 	if req.ScanID == "" {
-		collection, err := app.Dao().FindCollectionByNameOrId("nuclei_scans")
+		collection, err := pb.Dao().FindCollectionByNameOrId("nuclei_scans")
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{
 				"error": fmt.Sprintf("Failed to get nuclei_scans collection: %v", err),
@@ -242,7 +224,7 @@ func HandleTestNotification(c echo.Context) error {
 		}
 
 		// Create a test scan record
-		testScan := models.NewRecord(collection)
+		testScan := pbModels.NewRecord(collection)
 		testScan.Set("name", "Test Scan")
 		testScan.Set("tool", "test-tool")
 		testScan.Set("tool_version", "1.0.0")
@@ -251,7 +233,7 @@ func HandleTestNotification(c echo.Context) error {
 		testScan.Set("total_targets", 1)
 
 		// Get the first available client
-		clients, err := app.Dao().FindRecordsByExpr("clients")
+		clients, err := pb.Dao().FindRecordsByExpr("clients")
 		if err != nil || len(clients) == 0 {
 			return c.JSON(http.StatusInternalServerError, map[string]string{
 				"error": "No clients found in the database. Please create a client first.",
@@ -259,7 +241,7 @@ func HandleTestNotification(c echo.Context) error {
 		}
 		testScan.Set("client", clients[0].Id)
 
-		if err := app.Dao().SaveRecord(testScan); err != nil {
+		if err := pb.Dao().SaveRecord(testScan); err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{
 				"error": fmt.Sprintf("Failed to create test scan: %v", err),
 			})
@@ -283,7 +265,16 @@ func HandleTestNotification(c echo.Context) error {
 				"error": "Finding data is required for finding event",
 			})
 		}
-		err = HandleFinding(req.ScanID, req.Finding)
+		err = HandleFinding(pb, &models.Finding{
+			Name:        req.Finding["name"].(string),
+			Description: req.Finding["description"].(string),
+			Severity:    req.Finding["severity"].(string),
+			Host:        req.Finding["host"].(string),
+			Type:        req.Finding["type"].(string),
+			Tool:        req.Finding["tool"].(string),
+			ScanID:      req.ScanID,
+			ClientID:    req.Finding["client"].(string),
+		}, notificationService)
 	default:
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": "Invalid event type",

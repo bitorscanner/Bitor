@@ -21,6 +21,12 @@ const config = {
       assets: "../backend/pb_public",
       fallback: "index.html", // or another fallback file
     }),
+    alias: {
+      '@components': 'src/components',
+      '@utils': 'src/routes/utils',
+      '@stores': 'src/stores',
+      '@lib': 'src/lib'
+    }
   },
 };
 

@@ -145,12 +145,14 @@ func GenerateYAMLVars(app *pocketbase.PocketBase, scanID string) (string, error)
 
 	// Start building YAML content with client info
 	yamlContent := fmt.Sprintf(`---
+scan_id: "%s"
 client: "%s"
 client_hidden_name: "%s"
 client_id: "%s"
 interact_url: "%s"
 interact_token: "%s"
 api_key: "%s"`,
+		scanID,
 		clientRecord.GetString("name"),
 		clientRecord.GetString("hidden_name"),
 		clientRecord.GetString("id"),
@@ -582,7 +584,8 @@ provider:
 			case "digitalocean":
 				region := ""
 				doProject := ""
-				tags := []string{}
+				var tagString string
+
 				if settingsMap != nil {
 					region, _ = settingsMap["region"].(string)
 
@@ -598,13 +601,17 @@ provider:
 						switch v := tagsRaw.(type) {
 						case string:
 							if v != "" {
-								tags = strings.Split(v, ",")
+								tagString = v
 							}
 						case []interface{}:
+							var validTags []string
 							for _, tag := range v {
-								if str, ok := tag.(string); ok {
-									tags = append(tags, str)
+								if str, ok := tag.(string); ok && str != "" {
+									validTags = append(validTags, str)
 								}
+							}
+							if len(validTags) > 0 {
+								tagString = strings.Join(validTags, ",")
 							}
 						}
 					}
@@ -647,39 +654,47 @@ provider:
 				cmd.Stdout = &out
 				if err := cmd.Run(); err != nil {
 					// Fallback to unencrypted key
-					yamlContent += fmt.Sprintf(`
-
+					vmConfig := fmt.Sprintf(`
 vm:
   provider_service: "DigitalOcean"
   provider_key: "%s"
   do_project: "%s"
   do_region: "%s"
-  tags: "%s"
   do_size: "%s"`,
 						apiKey,
 						doProject,
 						region,
-						strings.Join(tags, ","),
 						vmSize)
+
+					// Add tags only if they exist
+					if tagString != "" {
+						vmConfig = strings.Replace(vmConfig, `do_size:`, fmt.Sprintf(`tags: "%s"
+  do_size:`, tagString), 1)
+					}
+					yamlContent += vmConfig
 				} else {
 					encryptedKey := out.String()
 					// Remove the "provider_key: " prefix from the encrypted output
 					encryptedKey = strings.TrimPrefix(encryptedKey, "provider_key: ")
-					yamlContent += fmt.Sprintf(`
-
+					vmConfig := fmt.Sprintf(`
 vm:
   provider_service: "DigitalOcean"
   provider_key: !vault |
 %s
   do_project: "%s"
   do_region: "%s"
-  tags: "%s"
   do_size: "%s"`,
 						indentVaultContent(encryptedKey),
 						doProject,
 						region,
-						strings.Join(tags, ","),
 						vmSize)
+
+					// Add tags only if they exist
+					if tagString != "" {
+						vmConfig = strings.Replace(vmConfig, `do_size:`, fmt.Sprintf(`tags: "%s"
+  do_size:`, tagString), 1)
+					}
+					yamlContent += vmConfig
 				}
 			}
 		}

@@ -1,5 +1,7 @@
 <script lang="ts">
-    import { MultiSelect } from 'flowbite-svelte';
+    // Cast the imported MultiSelect to any so we can pass the appendToBody prop
+    import { MultiSelect as OriginalMultiSelect } from 'flowbite-svelte';
+    const MultiSelect: any = OriginalMultiSelect;
     import type { UseType } from './types';
   
     export let value: UseType[] = [];
@@ -7,8 +9,8 @@
     export let onChange: (uses: UseType[]) => void;
   
     // Convert to items for MultiSelect
-    $: items = Object.entries(useDescriptions).map(([value, name]) => ({
-      value,
+    $: items = Object.entries(useDescriptions).map(([val, name]) => ({
+      value: val,
       name,
       label: name
     }));
@@ -26,9 +28,12 @@
     }
 </script>
   
-<MultiSelect
-    {items}
-    bind:value={selected}
-    placeholder="Select provider uses..."
-    class="w-full"
-/>
+<div>
+    <MultiSelect
+        {items}
+        bind:value={selected}
+        placeholder="Select provider uses..."
+        class="w-full"
+        appendToBody
+    />
+</div>

@@ -1,6 +1,7 @@
 package findings
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -16,6 +17,32 @@ import (
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase/models"
 )
+
+type Handler struct {
+	app    *pocketbase.PocketBase
+	logger *log.Logger
+}
+
+type Finding struct {
+	ID          string   `json:"id"`
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	Severity    string   `json:"severity"`
+	Type        string   `json:"type"`
+	Tool        string   `json:"tool"`
+	Host        string   `json:"host"`
+	Status      string   `json:"status"`
+	ClientID    string   `json:"client_id"`
+	Hash        string   `json:"hash"`
+	ScanIDs     []string `json:"scan_ids"`
+}
+
+func NewHandler(app *pocketbase.PocketBase, logger *log.Logger) *Handler {
+	return &Handler{
+		app:    app,
+		logger: logger,
+	}
+}
 
 // GroupedFindings represents the grouped findings.
 type GroupedFindings struct {
@@ -142,7 +169,7 @@ func HandleGroupedFindings(app *pocketbase.PocketBase) echo.HandlerFunc {
 		// Build the base query for counting total groups
 		countQuery := app.DB().
 			Select("COUNT(DISTINCT template_id) as total").
-			From("nuclei_results")
+			From("nuclei_findings")
 
 		if whereCond != nil {
 			countQuery.Where(whereCond)
@@ -166,7 +193,7 @@ func HandleGroupedFindings(app *pocketbase.PocketBase) echo.HandlerFunc {
 				"COUNT(*) as count",
 				"GROUP_CONCAT(id) as finding_ids",
 			).
-			From("nuclei_results")
+			From("nuclei_findings")
 
 		if whereCond != nil {
 			query.Where(whereCond)
@@ -215,7 +242,7 @@ func HandleGroupedFindings(app *pocketbase.PocketBase) echo.HandlerFunc {
 			findingIDs := strings.Split(result.FindingIDs, ",")
 
 			// Fetch the findings for this group
-			records, err := app.Dao().FindRecordsByExpr("nuclei_results", dbx.In("id", stringSliceToInterfaceSlice(findingIDs)...))
+			records, err := app.Dao().FindRecordsByExpr("nuclei_findings", dbx.In("id", stringSliceToInterfaceSlice(findingIDs)...))
 			if err != nil {
 				continue
 			}
@@ -314,7 +341,7 @@ func HandleBulkUpdateFindings(app *pocketbase.PocketBase) echo.HandlerFunc {
 
 		// Update records in batch
 		for _, id := range payload.IDs {
-			record, err := app.Dao().FindRecordById("nuclei_results", id)
+			record, err := app.Dao().FindRecordById("nuclei_findings", id)
 			if err != nil {
 				continue // Skip if not found
 			}
@@ -399,7 +426,7 @@ func HandleVulnerabilitiesByClient(app *pocketbase.PocketBase) echo.HandlerFunc 
 				"LOWER(COALESCE(NULLIF(TRIM(severity), ''), 'unknown')) as severity",
 				"COUNT(*) as count",
 			).
-			From("nuclei_results").
+			From("nuclei_findings").
 			Where(allConditions).
 			GroupBy("client", "severity")
 
@@ -501,7 +528,7 @@ func HandleRecentFindings(app *pocketbase.PocketBase) echo.HandlerFunc {
 				"ip",
 				"timestamp",
 			).
-			From("nuclei_results").
+			From("nuclei_findings").
 			Where(dbx.And(
 				dbx.NewExp("timestamp >= {:thirtyDaysAgo}", dbx.Params{"thirtyDaysAgo": thirtyDaysAgo}),
 				// Exclude 'info' severity (case-insensitive)
@@ -580,4 +607,106 @@ func getSeverityOrder(severity string) int {
 	default:
 		return 6 // Unknown severity
 	}
+}
+
+func (h *Handler) GetFindings(c echo.Context) error {
+	// Get query parameters
+	clientID := c.QueryParam("client")
+	if clientID == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "client parameter is required",
+		})
+	}
+
+	// Build filter
+	filter := fmt.Sprintf("client = '%s'", clientID)
+
+	// Get records
+	records, err := h.app.Dao().FindRecordsByFilter(
+		"nuclei_findings",
+		filter,
+		"created",
+		0,
+		-1,
+		nil,
+	)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": fmt.Sprintf("failed to get findings: %v", err),
+		})
+	}
+
+	// Convert records to findings
+	findings := make([]Finding, 0)
+	for _, record := range records {
+		finding := Finding{
+			ID:          record.Id,
+			Name:        record.GetString("name"),
+			Description: record.GetString("description"),
+			Severity:    record.GetString("severity"),
+			Type:        record.GetString("type"),
+			Tool:        record.GetString("tool"),
+			Host:        record.GetString("host"),
+			Status:      record.GetString("status"),
+			ClientID:    record.GetString("client"),
+			Hash:        record.GetString("hash"),
+		}
+
+		// Get scan_ids
+		scanIDsStr := record.GetString("scan_ids")
+		if scanIDsStr != "" {
+			var scanIDs []string
+			if err := json.Unmarshal([]byte(scanIDsStr), &scanIDs); err != nil {
+				h.logger.Printf("Error unmarshaling scan_ids for finding %s: %v", finding.ID, err)
+			} else {
+				finding.ScanIDs = scanIDs
+			}
+		}
+
+		findings = append(findings, finding)
+	}
+
+	return c.JSON(http.StatusOK, findings)
+}
+
+func (h *Handler) UpdateFindingStatus(c echo.Context) error {
+	// Get the finding ID from the URL
+	id := c.QueryParam("id")
+	if id == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "finding ID is required",
+		})
+	}
+
+	// Get the finding from the database
+	record, err := h.app.Dao().FindRecordById("nuclei_findings", id)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": fmt.Sprintf("failed to get finding: %v", err),
+		})
+	}
+
+	// Get the status from the request body
+	var req struct {
+		Status string `json:"status"`
+	}
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": fmt.Sprintf("failed to parse request body: %v", err),
+		})
+	}
+
+	// Update the status
+	record.Set("status", req.Status)
+
+	// Save the record
+	if err := h.app.Dao().SaveRecord(record); err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": fmt.Sprintf("failed to save finding: %v", err),
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{
+		"message": "finding status updated successfully",
+	})
 }

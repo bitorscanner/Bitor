@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { currentUser } from '$lib/stores/auth';
-    import { pocketbase } from '$lib/stores/pocketbase';
+    import { pocketbase } from '@lib/stores/pocketbase';
     import { defaultAvatarPath } from '$lib/utils/variables.js';
 
     $: avatarUrl = $currentUser?.avatar ? 

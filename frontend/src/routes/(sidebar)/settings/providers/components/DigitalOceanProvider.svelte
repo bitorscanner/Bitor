@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Label, Input, Select, Alert, Button, Badge, Spinner } from 'flowbite-svelte';
-    import { pocketbase } from '$lib/stores/pocketbase';
+    import { pocketbase } from '@lib/stores/pocketbase';
     import type { Provider, DigitalOceanSettings } from '../types';
     import { fetchDigitalOceanData } from '../utils/digitalocean';
     import { onMount } from 'svelte';

@@ -1,5 +1,5 @@
 import { redirect } from "@sveltejs/kit";
-import { pocketbase } from "$lib/stores/pocketbase";
+import { pocketbase } from "@lib/stores/pocketbase";
 import { currentUser } from "$lib/stores/auth";
 import { get } from "svelte/store";
 import { browser } from "$app/environment";

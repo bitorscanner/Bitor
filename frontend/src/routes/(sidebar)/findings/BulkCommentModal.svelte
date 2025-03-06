@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Button, Modal, Textarea } from 'flowbite-svelte';
-  import { pocketbase } from '$lib/stores/pocketbase';
+  import { pocketbase } from '@lib/stores/pocketbase';
   
   export let open = false;
   export let findings: Array<{id: string}> = [];

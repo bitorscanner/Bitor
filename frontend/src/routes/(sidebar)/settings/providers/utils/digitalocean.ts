@@ -1,6 +1,6 @@
 import type { Provider } from "../types";
 import { get } from "svelte/store";
-import { pocketbase } from "$lib/stores/pocketbase";
+import { pocketbase } from "@lib/stores/pocketbase";
 
 export interface DigitalOceanData {
   regions: { id: string; name: string }[];

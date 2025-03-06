@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Avatar, Dropdown, DropdownDivider, DropdownHeader, DropdownItem } from 'flowbite-svelte';
-	import { pocketbase } from '$lib/stores/pocketbase';
+	import { pocketbase } from '@lib/stores/pocketbase';
 	import { goto } from '$app/navigation';
 
 	export let user: { name: string; email: string; avatar?: string; role?: string };

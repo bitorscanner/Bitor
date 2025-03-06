@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { pocketbase } from '$lib/stores/pocketbase';
+  import { pocketbase } from '@lib/stores/pocketbase';
 
   let version = 'unknown';
 

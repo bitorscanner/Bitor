@@ -1,107 +1,144 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { pocketbase } from '$lib/stores/pocketbase';
+    import { pocketbase } from '@lib/stores/pocketbase';
     import { Card, Chart, Heading } from 'flowbite-svelte';
     import type { ApexOptions } from 'apexcharts';
+    
+    // Import ApexCharts only in browser
+    let ApexCharts: any;
+    onMount(async () => {
+      const module = await import('apexcharts');
+      ApexCharts = module.default;
+    });
+
+    interface ChartSeries {
+      name: string;
+      data: number[];
+    }
   
-    let chartOptions: ApexOptions = {
+    interface ChartOptions {
+      chart: {
+        type: string;
+        height: number;
+        toolbar: {
+          show: boolean;
+        };
+      };
+      plotOptions: {
+        bar: {
+          horizontal: boolean;
+          columnWidth: string;
+          borderRadius: number;
+        };
+      };
+      dataLabels: {
+        enabled: boolean;
+      };
+      stroke: {
+        show: boolean;
+        width: number;
+        colors: string[];
+      };
+      xaxis: {
+        categories: string[];
+      };
+      yaxis: {
+        title: {
+          text: string;
+        };
+      };
+      fill: {
+        opacity: number;
+      };
+      tooltip: {
+        y: {
+          formatter: (value: number) => string;
+        };
+      };
+      series: ChartSeries[];
+    }
+  
+    let chartOptions: ChartOptions = {
       chart: {
         type: 'bar',
         height: 350,
-      },
-      series: [
-        {
-          name: 'Vulnerabilities',
-          data: [0, 0, 0, 0], // Default data
-        },
-      ],
-      xaxis: {
-        categories: ['Critical', 'High', 'Medium', 'Unknown'],
+        toolbar: {
+          show: false
+        }
       },
       plotOptions: {
         bar: {
           horizontal: false,
-          columnWidth: '50%',
-          endingShape: 'rounded',
-          distributed: true, // Add this line
-        },
+          columnWidth: '55%',
+          borderRadius: 4
+        }
       },
       dataLabels: {
-        enabled: true,
+        enabled: false
+      },
+      stroke: {
+        show: true,
+        width: 2,
+        colors: ['transparent']
+      },
+      xaxis: {
+        categories: ['Critical', 'High', 'Medium', 'Unknown']
       },
       yaxis: {
         title: {
-          text: 'Number of Vulnerabilities',
-        },
+          text: 'Number of Vulnerabilities'
+        }
       },
       fill: {
-        opacity: 1,
+        opacity: 1
       },
       tooltip: {
         y: {
-          formatter: function (val) {
-            return val.toString();
-          },
-        },
+          formatter: (value: number) => `${value} vulnerabilities`
+        }
       },
-      colors: ['#8B5CF6', '#DC2626', '#FACC15', '#6B7280'], // Aligned colors
+      series: [{
+        name: 'Open Vulnerabilities',
+        data: [0, 0, 0, 0]
+      }]
     };
   
-    let vulnerabilitiesData = [];
+    let chart: any;
   
     async function fetchOpenVulnerabilities() {
       try {
-        const result = await $pocketbase.collection('nuclei_results').getFullList(200, {
+        const result = await $pocketbase.collection('nuclei_findings').getFullList(200, {
           filter: `
             (severity = "critical" || severity = "high" || severity = "medium" || severity = "unknown")
-            && acknowledged = false
-            && false_positive = false
-          `,
+            && (status = "open" || status = "")
+          `
         });
   
-        // Process the data to count vulnerabilities by severity
-        const severityCounts = {
-          Critical: 0,
-          High: 0,
-          Medium: 0,
-          Unknown: 0,
-        };
+        const criticalCount = result.filter(item => item.severity === 'critical').length;
+        const highCount = result.filter(item => item.severity === 'high').length;
+        const mediumCount = result.filter(item => item.severity === 'medium').length;
+        const unknownCount = result.filter(item => item.severity === 'unknown').length;
   
-        result.forEach((finding) => {
-          const severity = finding.severity.toLowerCase();
-          switch (severity) {
-            case 'critical':
-              severityCounts.Critical += 1;
-              break;
-            case 'high':
-              severityCounts.High += 1;
-              break;
-            case 'medium':
-              severityCounts.Medium += 1;
-              break;
-            case 'unknown':
-              severityCounts.Unknown += 1;
-              break;
-            // Ignore 'low' and 'info' severities
+        if (chartOptions.series && chartOptions.series[0]) {
+          chartOptions.series[0].data = [criticalCount, highCount, mediumCount, unknownCount];
+          if (chart) {
+            chart.updateOptions(chartOptions);
           }
-        });
-  
-        vulnerabilitiesData = [
-          severityCounts.Critical,
-          severityCounts.High,
-          severityCounts.Medium,
-          severityCounts.Unknown,
-        ];
-  
-        // Update chart data
-        chartOptions.series[0].data = vulnerabilitiesData;
+        }
       } catch (error) {
         console.error('Error fetching open vulnerabilities:', error);
       }
     }
   
-    onMount(() => {
-      fetchOpenVulnerabilities();
+    onMount(async () => {
+      if (typeof window !== 'undefined') {
+        const chartElement = document.querySelector('#openVulnerabilitiesChart');
+        if (chartElement && ApexCharts) {
+          chart = new ApexCharts(chartElement, chartOptions);
+          await chart.render();
+          await fetchOpenVulnerabilities();
+        }
+      }
     });
   </script>
   
@@ -115,9 +152,5 @@
       </div>
     </div>
   
-    {#if chartOptions.series[0].data.some((value) => value > 0)}
-      <Chart options={chartOptions}></Chart>
-    {:else}
-      <p class="text-center text-gray-500 dark:text-gray-400">No data available to display.</p>
-    {/if}
+    <div id="openVulnerabilitiesChart" class="w-full h-96"></div>
   </Card>

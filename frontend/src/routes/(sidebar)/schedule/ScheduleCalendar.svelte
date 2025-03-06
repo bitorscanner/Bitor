@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { createEventDispatcher } from 'svelte';
-  import { pocketbase } from '$lib/stores/pocketbase';
+  import { pocketbase } from '@lib/stores/pocketbase';
   import { browser } from '$app/environment';
   import { ScheduleXCalendar } from '@schedule-x/svelte';
   import { createCalendar, createViewMonthGrid, createViewWeek, createViewDay } from '@schedule-x/calendar';

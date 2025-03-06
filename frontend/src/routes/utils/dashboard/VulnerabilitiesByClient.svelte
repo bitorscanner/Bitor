@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { get } from 'svelte/store';
-  import { pocketbase } from '$lib/stores/pocketbase';
+  import { pocketbase } from '@lib/stores/pocketbase';
   import { Card, Heading } from 'flowbite-svelte';
   import { Bar } from 'svelte-chartjs';
   import type { ChartConfiguration } from 'chart.js';

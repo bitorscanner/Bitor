@@ -2,7 +2,7 @@
     import { Button, Input, Label, Modal, Toast } from 'flowbite-svelte';
     import { slide } from 'svelte/transition';
     import { CheckCircleSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
-    import { pocketbase } from '$lib/stores/pocketbase';
+    import { pocketbase } from '@lib/stores/pocketbase';
 
     export let open: boolean = false;
     export let userId: string;

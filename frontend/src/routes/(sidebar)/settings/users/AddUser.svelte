@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Button, Input, Label, Modal, Select, Checkbox } from 'flowbite-svelte';
-    import { pocketbase } from '$lib/stores/pocketbase';
+    import { pocketbase } from '@lib/stores/pocketbase';
     import type { RecordModel } from 'pocketbase';
 
     export let open = false;

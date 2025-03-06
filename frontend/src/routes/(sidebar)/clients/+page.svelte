@@ -14,10 +14,10 @@
       Select,
     } from 'flowbite-svelte';
     import { onMount } from 'svelte';
-    import { pocketbase } from '$lib/stores/pocketbase';
+    import { pocketbase } from '@lib/stores/pocketbase';
     import ClientForm from './ClientForm.svelte';
     import Delete from './Delete.svelte';
-    import MetaTag from '../../utils/MetaTag.svelte';
+    import MetaTag from '@utils/MetaTag.svelte';
     import ClientGroupForm from './ClientGroupForm.svelte';
   
     interface Client {

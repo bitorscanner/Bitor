@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Label, Input, Toggle, Button, Alert } from 'flowbite-svelte';
-    import { pocketbase } from '$lib/stores/pocketbase';
+    import { pocketbase } from '@lib/stores/pocketbase';
     import type { Provider, S3Settings } from '../types';
     import S3APIKeyModal from './S3APIKeyModal.svelte';
 

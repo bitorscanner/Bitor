@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"orbit/clients"
 	"orbit/findings"
 	"orbit/notifications"
 	"orbit/providers"
@@ -13,6 +14,7 @@ import (
 	"orbit/scan/profiles"
 	scanTemplates "orbit/scan/templates"
 	"orbit/scheduler"
+	"orbit/services"
 	"orbit/services/notification"
 	"orbit/templates"
 	"orbit/users"
@@ -212,9 +214,13 @@ func RegisterRoutes(app *pocketbase.PocketBase, ansibleBasePath string, notifica
 	// Create a base group for API routes
 	apiGroup := e.Router.Group("/api")
 
+	// Create a new finding manager instance
+	findingManager := services.NewFindingManager(app, notificationService)
+
+	// Register all routes
 	providers.RegisterRoutes(app, apiGroup)
 	scan.RegisterRoutes(app, e, ansibleBasePath, notificationService)
-	findings.RegisterRoutes(app, e)
+	findings.RegisterRoutes(app, e, findingManager)
 	templates.RegisterRoutes(app, e)
 	scanTemplates.RegisterRoutes(app, apiGroup)
 	version.RegisterRoutes(e)
@@ -223,6 +229,8 @@ func RegisterRoutes(app *pocketbase.PocketBase, ansibleBasePath string, notifica
 	log.Printf("Registering users routes...")
 	users.RegisterRoutes(app, e)
 	log.Printf("Users routes registered")
+	clients.RegisterRoutes(app, e)
+	log.Printf("Client routes registered")
 
 	// Register AWS provider routes
 	aws.RegisterRoutes(e, apiGroup)

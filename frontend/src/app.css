@@ -1,0 +1,25 @@
+/* Reset any inherited constraints */
+:global(.flowbite-multi-select-dropdown) {
+  position: fixed !important;
+  top: 20px !important; /* Distance from top of viewport */
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  z-index: 99999 !important;
+  width: 300px !important; /* Fixed width */
+  max-height: none !important;
+  height: auto !important;
+  overflow: visible !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  background: white !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 0.5rem !important;
+}
+
+/* Style for the dropdown content container */
+:global(.flowbite-multi-select-dropdown > div) {
+  max-height: 300px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  background: white !important;
+  border-radius: 0.5rem !important;
+} 

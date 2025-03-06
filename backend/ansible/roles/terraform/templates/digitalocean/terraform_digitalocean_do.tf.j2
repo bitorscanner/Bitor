@@ -1,7 +1,7 @@
 {# Only include the tag section if vm.tags exists and is not empty #}
-{% if vm.tags and vm.tags.strip() %}
-{% for tag in vm.tags.split(',') %}
-resource "digitalocean_tag" "{{ tag | trim | lower | replace(' ', '_') }}" {
+{% if vm is defined and vm.tags is defined and vm.tags and vm.tags.strip() %}
+{% for tag in vm.tags.replace(',', ' ').split() %}
+resource "digitalocean_tag" "orbit_tag_{{ loop.index }}" {
   name = "{{ tag | trim }}"
 }
 {% endfor %}
@@ -22,8 +22,8 @@ resource "digitalocean_droplet" "vm" {
   name = "{{ 'vm-' + scan_id }}"
   region = "{{ vm.do_region|default(vm_default_do_region) }}"
   size = "{{ vm.do_size|default(vm_default_do_size) }}"
-  {% if vm.tags and vm.tags.strip() %}
-  tags = [{% for tag in vm.tags.split(',') %}digitalocean_tag.{{ tag | trim | lower | replace(' ', '_') }}.id,{% endfor %}]
+  {% if vm is defined and vm.tags is defined and vm.tags and vm.tags.strip() %}
+  tags = [{% for tag in vm.tags.replace(',', ' ').split() %}digitalocean_tag.orbit_tag_{{ loop.index }}.id,{% endfor %}]
   {% endif %}
   user_data = "${file("cloud-init-do.yaml")}"
   ssh_keys = [

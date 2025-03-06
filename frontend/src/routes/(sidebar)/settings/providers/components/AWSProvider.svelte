@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { pocketbase } from '$lib/stores/pocketbase';
+	import { pocketbase } from '@lib/stores/pocketbase';
 	import { Button, Label, Select, Toast, Spinner, Badge, Input } from 'flowbite-svelte';
 	import { CheckCircleSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
 	import type { Provider, AWSSettings } from '../types';

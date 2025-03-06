@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { afterNavigate, goto } from '$app/navigation';
-	import { pocketbase } from '$lib/stores/pocketbase';
+	import { pocketbase } from '@lib/stores/pocketbase';
 	import { currentUser } from '$lib/stores/auth';
 	import { settings } from '$lib/stores/settings';
 	import { theme } from '$lib/stores/theme';

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { pocketbase } from '$lib/stores/pocketbase';
+  import { pocketbase } from '@lib/stores/pocketbase';
   import { goto } from '$app/navigation';
   import { writable } from 'svelte/store';
   import { theme } from '$lib/stores/theme';

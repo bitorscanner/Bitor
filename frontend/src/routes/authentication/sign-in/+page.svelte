@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { Label, Input } from 'flowbite-svelte';
-	import SignIn from '../../utils/authentication/SignIn.svelte';
+	import SignIn from '@utils/authentication/SignIn.svelte';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { pocketbase } from '$lib/stores/pocketbase';
+	import { pocketbase } from '@lib/stores/pocketbase';
 	import { writable } from 'svelte/store';
 	import { Alert } from 'flowbite-svelte';
 	import { InfoCircleSolid } from 'flowbite-svelte-icons';

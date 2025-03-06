@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Label, Input, Select, Button } from 'flowbite-svelte';
-    import { pocketbase } from '$lib/stores/pocketbase';
+    import { pocketbase } from '@lib/stores/pocketbase';
     import { onMount } from 'svelte';
     import type { Provider, EmailSettings, WebhookSettings, TelegramSettings, JiraSettings, JiraClientMapping } from '../types';
     import JiraClientMappings from './JiraClientMappings.svelte';

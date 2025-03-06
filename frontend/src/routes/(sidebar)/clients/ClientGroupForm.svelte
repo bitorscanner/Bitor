@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte';
   import { Modal, Input, Button, Label, Checkbox } from 'flowbite-svelte';
-  import { pocketbase } from '$lib/stores/pocketbase';
+  import { pocketbase } from '@lib/stores/pocketbase';
 
   export let open = false;
   export let size = 'lg';

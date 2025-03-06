@@ -3,7 +3,7 @@
   import ScheduleScanModal from './ScheduleScanModal.svelte';
   import { Breadcrumb, BreadcrumbItem, Heading, Button, Card } from 'flowbite-svelte';
   import { onMount } from 'svelte';
-  import { pocketbase } from '$lib/stores/pocketbase';
+  import { pocketbase } from '@lib/stores/pocketbase';
 
   let showScheduleModal = false;
   let calendarComponent: any;

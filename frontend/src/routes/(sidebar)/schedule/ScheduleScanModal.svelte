@@ -1,6 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
-  import { pocketbase } from '$lib/stores/pocketbase';
+  import { pocketbase } from '@lib/stores/pocketbase';
   import { browser } from '$app/environment';
   import { Modal, Label, Input, Select, Button, Tabs, TabItem, Radio, Badge } from 'flowbite-svelte';
   import { goto } from '$app/navigation';

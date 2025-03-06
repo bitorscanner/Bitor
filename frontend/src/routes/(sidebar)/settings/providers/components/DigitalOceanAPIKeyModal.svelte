@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Modal, Button, Label, Input, Alert } from 'flowbite-svelte';
-    import { pocketbase } from '$lib/stores/pocketbase';
+    import { pocketbase } from '@lib/stores/pocketbase';
     import type { Provider } from '../types';
 
     export let show = false;

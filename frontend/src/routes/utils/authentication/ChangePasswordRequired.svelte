@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Label, Input, Button, Card } from 'flowbite-svelte';
-    import { pocketbase } from '$lib/stores/pocketbase';
+    import { pocketbase } from '@lib/stores/pocketbase';
     import { goto } from '$app/navigation';
 
     export let userId: string;

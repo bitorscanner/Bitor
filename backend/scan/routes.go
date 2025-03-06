@@ -17,6 +17,7 @@ func RegisterRoutes(app *pocketbase.PocketBase, e *core.ServeEvent, ansibleBaseP
 
 	// Initialize handlers with required services
 	InitHandlers(app, ansibleBasePath, notificationService)
+	handlers.InitHandlers(app, notificationService)
 
 	// Create a group for the scan routes with the authentication middleware
 	scanGroup := e.Router.Group("/api/scan",

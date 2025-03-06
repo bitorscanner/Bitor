@@ -16,6 +16,7 @@ import (
 	"github.com/pocketbase/pocketbase/plugins/migratecmd"
 	"github.com/spf13/cobra"
 
+	"orbit/handlers"
 	_ "orbit/migrations" // ensure migrations are registered
 	"orbit/nuclei"
 	"orbit/routes"
@@ -33,7 +34,7 @@ import (
 var distDir embed.FS
 var distDirFS, _ = fs.Sub(distDir, "pb_public")
 
-//go:embed all:ansible
+//go:embed ansible/roles/generate ansible/roles/terraform ansible/roles/nuclei ansible/generate.yml ansible/defaults.yml
 var ansibleFiles embed.FS
 
 var Version = "development"
@@ -239,14 +240,18 @@ func main() {
 		// Register version check routes
 		version.RegisterRoutes(e)
 
-		// Register all routes through the central route registration
+		// Register routes and services
 		if err := routes.RegisterRoutes(app, ansibleBasePath, notificationService, e); err != nil {
 			log.Printf("Failed to register routes: %v", err)
 			return err
 		}
 
+		// Expose debug routes for development purposes
+		handlers.RegisterDebugRoutes(e)
+
 		// Serve static files from pb_public directory
 		e.Router.GET("/*", echo.WrapHandler(http.FileServer(http.FS(distDirFS))))
+
 		return nil
 	})
 

@@ -2,7 +2,7 @@
     import { createEventDispatcher, onMount } from 'svelte';
     import { Input, Label, Modal, Select, Button } from 'flowbite-svelte';
     import { uniqueNamesGenerator, adjectives, colors, animals } from 'unique-names-generator';
-    import { pocketbase } from '$lib/stores/pocketbase';
+    import { pocketbase } from '@lib/stores/pocketbase';
     import { getFavicon } from '$lib/utils/favicon';
   
     export let open = false;
@@ -76,78 +76,6 @@
       });
     }
   
-    async function updateFavicon(url: string) {
-      try {
-        console.log('Fetching favicon for homepage:', url);
-        const faviconUrl = await getFavicon(url);
-        console.log('Got favicon URL:', faviconUrl);
-        
-        if (faviconUrl) {
-          console.log('Fetching favicon from URL:', faviconUrl);
-          
-          // Add headers to prevent CORS issues
-          const response = await fetch(faviconUrl, {
-            headers: {
-              'Accept': 'image/png,image/*',
-            },
-            mode: 'cors'
-          });
-          
-          if (!response.ok) {
-            throw new Error(`Failed to fetch favicon: ${response.status} ${response.statusText}`);
-          }
-          
-          // Log response headers
-          console.log('Response headers:', {
-            type: response.headers.get('content-type'),
-            size: response.headers.get('content-length')
-          });
-          
-          // Get the response as a blob directly
-          const blob = await response.blob();
-          if (!blob) {
-            throw new Error('Failed to get blob from response');
-          }
-          
-          console.log('Got favicon blob:', {
-            size: blob.size,
-            type: blob.type
-          });
-
-          // Create a File object with the blob
-          const file = new File([blob], 'favicon.png', { 
-            type: 'image/png'
-          });
-          
-          // Verify the file was created successfully
-          if (!(file instanceof File)) {
-            throw new Error('Failed to create File object');
-          }
-          
-          console.log('Created favicon file:', {
-            name: file.name,
-            type: file.type,
-            size: file.size
-          });
-          
-          // Test reading the file to verify it's valid
-          const reader = new FileReader();
-          reader.onload = () => {
-            console.log('Successfully read file contents');
-          };
-          reader.onerror = () => {
-            console.error('Failed to read file contents');
-          };
-          reader.readAsArrayBuffer(file);
-          
-          return file;
-        }
-      } catch (error) {
-        console.error('Error in updateFavicon:', error);
-        return null;
-      }
-    }
-  
     async function handleSave() {
       try {
         console.log('Starting save process...');
@@ -163,47 +91,6 @@
           formData.append('homepage', homepage);
         }
 
-        // Handle favicon
-        if (homepage) {
-          console.log('Getting favicon for homepage:', homepage);
-          const faviconFile = await updateFavicon(homepage);
-          
-          if (!faviconFile) {
-            console.error('Failed to get favicon file');
-          } else {
-            console.log('Adding favicon to FormData:', {
-              name: faviconFile.name,
-              type: faviconFile.type,
-              size: faviconFile.size
-            });
-            
-            // Add the file to FormData
-            formData.append('favicon', faviconFile, 'favicon.png');
-
-            // Verify the file was added to FormData
-            const formDataFile = formData.get('favicon') as File;
-            if (!formDataFile) {
-              console.error('Failed to add file to FormData');
-            } else {
-              console.log('Verified file in FormData:', {
-                name: formDataFile.name,
-                type: formDataFile.type,
-                size: formDataFile.size
-              });
-            }
-          }
-        }
-
-        // Log all FormData entries
-        console.log('Final FormData contents:');
-        for (const [key, value] of formData.entries()) {
-          if (value instanceof File) {
-            console.log(`${key}: File(${value.name}, ${value.type}, ${value.size} bytes)`);
-          } else {
-            console.log(`${key}: ${value}`);
-          }
-        }
-
         // Save to PocketBase
         let savedClient;
         if (mode === 'edit' && client) {
@@ -216,12 +103,16 @@
         
         console.log('Raw saved client response:', savedClient);
         
-        // Verify the favicon was saved
-        if (savedClient.favicon) {
-          const faviconUrl = $pocketbase.getFileUrl(savedClient, 'favicon');
-          console.log('Saved favicon URL:', faviconUrl);
-        } else {
-          console.warn('No favicon in saved client. Raw favicon value:', savedClient.favicon);
+        // After saving, fetch the favicon if we have a homepage
+        if (homepage && savedClient.id) {
+          console.log('Fetching favicon for homepage:', homepage);
+          const faviconDataUri = await getFavicon(homepage, savedClient.id);
+          
+          if (faviconDataUri) {
+            console.log('Successfully fetched favicon');
+          } else {
+            console.warn('Failed to fetch favicon');
+          }
         }
         
         dispatch('save', {
@@ -238,7 +129,7 @@
         homepage = '';
       } catch (error) {
         console.error('Save failed:', error);
-        if (error && typeof error === 'object' && 'response' in error) {
+        if (error && typeof error === 'object' && 'response' in error && error.response instanceof Response) {
           try {
             const errorData = await error.response.json();
             console.error('Error details:', errorData);

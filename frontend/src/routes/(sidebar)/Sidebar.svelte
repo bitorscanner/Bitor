@@ -2,7 +2,7 @@
 	import { afterNavigate } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
-	import { pocketbase } from '$lib/stores/pocketbase';
+	import { pocketbase } from '@lib/stores/pocketbase';
 	import { currentUser } from '$lib/stores/auth';
 
 	import {
@@ -35,11 +35,13 @@
 		UsersGroupSolid,
 		BellSolid,
 		CogSolid,
-		ServerSolid
+		ServerSolid,
+		GlobeSolid
 	} from 'flowbite-svelte-icons';
 
-	// Import the Target icon from lucide-svelte
+	// Import the Target icon from lucide-svelte and Nuclei icon
 	import { Target, UserRoundSearch } from 'lucide-svelte';
+	import ProjectDiscoveryIcon from '$lib/components/icons/ProjectDiscoveryIcon.svelte';
 
 	export let drawerHidden: boolean = false;
 
@@ -80,10 +82,47 @@
 	$: posts = [
 		{ name: 'Dashboard', icon: ChartPieOutline, href: '/dashboard' },
 		{ name: 'Findings', icon: InboxFullSolid, href: '/findings' },
-		{ name: 'Scans', icon: SearchSolid, href: '/scans' },
-		{ name: 'Targets', icon: Target, href: '/targets' },
-		{ name: 'Profiles', icon: ProfileCardSolid, href: '/profiles' },
-		{ name: 'Templates', icon: ArrowRightAltSolid, href: '/templates' },
+		{ 
+			name: 'Attack Surface', 
+			icon: GlobeSolid,
+			disabled: true,
+			children: {
+				'Domains': {
+					href: '/attack-surface/domains',
+					icon: SearchSolid
+				},
+				'IPs': {
+					href: '/attack-surface/ips',
+					icon: ServerSolid
+				},
+				'URLs': {
+					href: '/attack-surface/urls',
+					icon: GlobeSolid
+				}
+			}
+		},
+		{ 
+			name: 'Nuclei', 
+			icon: ProjectDiscoveryIcon,
+			children: {
+				'Targets': {
+					href: '/nuclei/targets',
+					icon: Target
+				},
+				'Scans': {
+					href: '/nuclei/scans',
+					icon: SearchSolid
+				},
+				'Profiles': {
+					href: '/nuclei/profiles',
+					icon: ProfileCardSolid
+				},
+				'Templates': {
+					href: '/nuclei/templates',
+					icon: ArrowRightAltSolid
+				}
+			}
+		},
 		{ name: 'Clients', icon: UserRoundSearch, href: '/clients' },
 		// Commenting out schedule for beta release as feature is not complete
 		// { name: 'Schedule', icon: CalendarMonthSolid, href: '/schedule' },
@@ -177,19 +216,23 @@
 	>
 		<nav class="divide-y divide-gray-200 dark:divide-gray-700 pb-4">
 			<SidebarGroup ulClass={groupClass} class="mb-3">
-				{#each posts as { name, icon, children, href } (name)}
-					{#if children}
-						<SidebarDropdownWrapper bind:isOpen={dropdowns[name]} label={name} class="pr-3">
+				{#each posts as post (post.name)}
+					{#if post.children}
+						<SidebarDropdownWrapper 
+							bind:isOpen={dropdowns[post.name]} 
+							label={post.name} 
+							class="pr-3 {post.disabled ? 'opacity-50 cursor-not-allowed' : ''}"
+						>
 							<AngleDownOutline slot="arrowdown" strokeWidth="3.3" size="sm" />
 							<AngleUpOutline slot="arrowup" strokeWidth="3.3" size="sm" />
-							<svelte:component this={icon} slot="icon" class={iconClass} />
+							<svelte:component this={post.icon} slot="icon" class={iconClass} />
 
-							{#each Object.entries(children) as [title, item]}
+							{#each Object.entries(post.children) as [title, item]}
 								<SidebarItem
 									label={title}
 									href={item.href}
 									spanClass="ml-9"
-									class={itemClass}
+									class="{itemClass} {post.disabled ? 'pointer-events-none opacity-50' : ''}"
 								>
 									<svelte:component 
 										this={item.icon} 
@@ -201,12 +244,12 @@
 						</SidebarDropdownWrapper>
 					{:else}
 						<SidebarItem
-							label={name}
-							{href}
-								spanClass="ml-3"
-								class={itemClass}
+							label={post.name}
+							href={post.href}
+							spanClass="ml-3"
+							class={itemClass}
 						>
-							<svelte:component this={icon} slot="icon" class={iconClass} />
+							<svelte:component this={post.icon} slot="icon" class={iconClass} />
 						</SidebarItem>
 					{/if}
 				{/each}

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { pocketbase } from '$lib/stores/pocketbase';
+  import { pocketbase } from '@lib/stores/pocketbase';
   import { currentUser } from '$lib/stores/auth';
   import { Button, Card, Label, Input, Toast, Dropzone, Select, Avatar, Breadcrumb, BreadcrumbItem } from 'flowbite-svelte';
   import { slide } from 'svelte/transition';

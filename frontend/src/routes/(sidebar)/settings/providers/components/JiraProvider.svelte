@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Label, Input, Select, Alert, Button, Badge, Spinner } from 'flowbite-svelte';
-    import { pocketbase } from '$lib/stores/pocketbase';
+    import { pocketbase } from '@lib/stores/pocketbase';
     import type { Provider, JiraSettings } from '../types';
     import { onMount } from 'svelte';
     import JiraCredentialsModal from './JiraCredentialsModal.svelte';
