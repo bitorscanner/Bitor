@@ -16,6 +16,7 @@ import (
 
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
+	"github.com/pocketbase/pocketbase/apis"
 	pbModels "github.com/pocketbase/pocketbase/models"
 
 	orbitModels "orbit/models"
@@ -50,6 +51,25 @@ func InitHandlers(app *pocketbase.PocketBase, ns *notification.NotificationServi
 
 func HandleImportNucleiScanResults(app *pocketbase.PocketBase) echo.HandlerFunc {
 	return func(c echo.Context) error {
+		// Get the current user or admin from context
+		admin, _ := c.Get(apis.ContextAdminKey).(*pbModels.Admin)
+		record, _ := c.Get(apis.ContextAuthRecordKey).(*pbModels.Record)
+
+		// Check if either admin or user is authenticated
+		if admin == nil && record == nil {
+			return c.JSON(http.StatusUnauthorized, map[string]string{
+				"error": "Authentication required",
+			})
+		}
+
+		// Get user ID (either from admin or regular user)
+		var userID string
+		if admin != nil {
+			userID = admin.Id
+		} else {
+			userID = record.Id
+		}
+
 		// Retrieve form values
 		clientID := c.FormValue("client_id")
 		scanID := c.FormValue("scan_id")
@@ -145,7 +165,7 @@ func HandleImportNucleiScanResults(app *pocketbase.PocketBase) echo.HandlerFunc 
 			// If all chunks received, process the file
 			if isComplete {
 				log.Printf("All chunks received for scan %s, starting processing", scanID)
-				go processFile(app, info.FilePath, scanID, clientID)
+				go processFile(app, info.FilePath, scanID, clientID, userID)
 				return c.JSON(http.StatusOK, map[string]string{
 					"status": "All chunks received and processing started",
 				})
@@ -184,7 +204,7 @@ func HandleImportNucleiScanResults(app *pocketbase.PocketBase) echo.HandlerFunc 
 			}
 
 			log.Printf("Processing file for scan %s", scanID)
-			processFile(app, filePath, scanID, clientID)
+			processFile(app, filePath, scanID, clientID, userID)
 
 			return c.JSON(http.StatusOK, map[string]string{
 				"status": "File processed successfully",
@@ -194,7 +214,7 @@ func HandleImportNucleiScanResults(app *pocketbase.PocketBase) echo.HandlerFunc 
 }
 
 // processFile handles the processing of the complete file
-func processFile(app *pocketbase.PocketBase, filePath string, scanID string, clientID string) {
+func processFile(app *pocketbase.PocketBase, filePath string, scanID string, clientID string, userID string) {
 	var logger *log.Logger
 
 	// Create logs directory if it doesn't exist
@@ -278,10 +298,15 @@ func processFile(app *pocketbase.PocketBase, filePath string, scanID string, cli
 		}
 	}
 
-	logger.Printf("[INFO] Processing %d findings for scan %s", len(findings), scanID)
+	// Get the created_by from the scan record
+	scanCreatedBy := record.GetString("created_by")
+	if scanCreatedBy == "" {
+		scanCreatedBy = userID // Fallback to the userID if not set in scan
+	}
+	logger.Printf("[DEBUG] Using created_by: %s for findings", scanCreatedBy)
 
 	// Process findings in parallel
-	processFindings(app, findings, clientID, scanID, logger)
+	processFindings(app, findings, clientID, scanID, logger, userID)
 
 	// Trigger scan finished event to create nuclei_findings_rollup
 	if err := scanEventService.HandleScanFinished(scanID); err != nil {
@@ -312,8 +337,9 @@ func getSeverityOrder(severity string) int {
 }
 
 // Process findings in parallel
-func processFindings(app *pocketbase.PocketBase, findings []orbitModels.NucleiFinding, clientID string, scanID string, logger *log.Logger) {
+func processFindings(app *pocketbase.PocketBase, findings []orbitModels.NucleiFinding, clientID string, scanID string, logger *log.Logger, userID string) {
 	logger.Printf("[DEBUG] Starting processFindings for scan %s with %d total findings", scanID, len(findings))
+	logger.Printf("[DEBUG] Using userID %s for created_by field", userID)
 
 	// Map to track unique findings
 	findingsMap := make(map[string]struct {
@@ -326,7 +352,7 @@ func processFindings(app *pocketbase.PocketBase, findings []orbitModels.NucleiFi
 
 	// First pass: identify unique findings and check for hash collisions
 	for _, finding := range findings {
-		newFinding, err := orbitModels.NewFindingFromNuclei(finding, clientID, scanID)
+		newFinding, err := orbitModels.NewFindingFromNuclei(finding, clientID, scanID, userID)
 		if err != nil {
 			logger.Printf("[ERROR] Error creating finding: %v", err)
 			continue

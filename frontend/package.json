@@ -96,6 +96,7 @@
     "prosemirror-transform": "^1.10.2",
     "prosemirror-view": "^1.37.0",
     "svelte-chartjs": "^3.1.5",
+    "svelte-dnd-action": "^0.9.60",
     "svelte-fullcalendar": "^3.0.0",
     "svelte-lexical": "^0.4.3",
     "svelte-meta-tags": "^3.1.4",

@@ -141,13 +141,13 @@
           <div class="p-6 text-center">
             <!-- Light mode logo -->
             <img
-              src="/images/Orbit-Main-Logo.png"
+              src="/images/Bitor_Main_Logo.png"
               alt="Orbit Logo"
               class="mx-auto block dark:hidden"
             />
             <!-- Dark mode logo -->
             <img
-              src="/images/Orbit_White_Logo.png"
+              src="/images/Bitor_White_Logo.png"
               alt="Orbit Logo"
               class="mx-auto hidden dark:block"
             />
@@ -232,13 +232,13 @@
           <div class="p-6 text-center">
             <!-- Light mode logo -->
             <img
-              src="/images/Orbit-Main-Logo.png"
+              src="/images/Bitor_Main_Logo.png"
               alt="Orbit Logo"
               class="mx-auto block dark:hidden"
             />
             <!-- Dark mode logo -->
             <img
-              src="/images/Orbit_White_Logo.png"
+              src="/images/Bitor_White_Logo.png"
               alt="Orbit Logo"
               class="mx-auto hidden dark:block"
             />

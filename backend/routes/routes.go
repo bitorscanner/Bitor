@@ -211,11 +211,14 @@ func RegisterRoutes(app *pocketbase.PocketBase, ansibleBasePath string, notifica
 	log.Printf("RegisterRoutes called with ansible base path: %s", ansibleBasePath)
 	log.Printf("Registering all routes...")
 
+	// Initialize finding manager
+	findingManager := services.NewFindingManager(app, notificationService)
+
+	// Register findings routes
+	RegisterFindingsRoutes(app, e, findingManager)
+
 	// Create a base group for API routes
 	apiGroup := e.Router.Group("/api")
-
-	// Create a new finding manager instance
-	findingManager := services.NewFindingManager(app, notificationService)
 
 	// Register all routes
 	providers.RegisterRoutes(app, apiGroup)

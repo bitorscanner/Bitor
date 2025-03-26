@@ -14,15 +14,37 @@
   } from 'flowbite-svelte';
   import { format, differenceInSeconds } from 'date-fns';
 
-  let failedScans = [];
+  interface ScanData {
+    id: string;
+    name: string;
+    status: string;
+    start_time: string;
+    end_time: string;
+  }
+
+  let failedScans: ScanData[] = [];
+  let currentUserId = $pocketbase.authStore.model?.id ?? '';
 
   async function fetchFailedScans() {
     try {
+      let filter = 'status="Failed"';
+      
+      // Always apply user filter for non-admin users
+      if (!$pocketbase.authStore.isAdmin) {
+        filter += ` && created_by = "${currentUserId}"`;
+      }
+
       const result = await $pocketbase.collection('nuclei_scans').getList(1, 50, {
-        filter: 'status="Failed"',
-        sort: '-end_time', // Optional: Sort by most recent
+        filter: filter,
+        sort: '-end_time',
       });
-      failedScans = result.items;
+      failedScans = result.items.map(item => ({
+        id: item.id,
+        name: item.name,
+        status: item.status,
+        start_time: item.start_time,
+        end_time: item.end_time
+      }));
     } catch (error) {
       console.error('Error fetching failed scans:', error);
     }

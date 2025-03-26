@@ -21,7 +21,7 @@
 	const title = 'Sign in to Orbit';
 	const site = {
 		name: 'Orbit',
-		img: '/images/Orbit-Main-Logo.png',
+		img: '/images/Bitor_Main_Logo.png',
 		link: '/',
 		imgAlt: 'Orbit Logo'
 	};

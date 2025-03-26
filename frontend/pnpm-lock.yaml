@@ -164,6 +164,9 @@ importers:
       svelte-chartjs:
         specifier: ^3.1.5
         version: 3.1.5(chart.js@4.4.6)(svelte@4.2.19)
+      svelte-dnd-action:
+        specifier: ^0.9.60
+        version: 0.9.60(svelte@4.2.19)
       svelte-fullcalendar:
         specifier: ^3.0.0
         version: 3.0.0(@fullcalendar/core@6.1.15)
@@ -3541,6 +3544,11 @@ packages:
     peerDependencies:
       svelte: ^4.0.0 || ^5.0.0-next.0
       typescript: '>=5.0.0'
+
+  svelte-dnd-action@0.9.60:
+    resolution: {integrity: sha512-PTz9RlJiSTNXo0mIUGPmYXRMcqzLG/ghr79YqLrsOrq0dM4gQhXn97AkuImTalNuIxl/tohFK3uQPsEML+ZKeQ==}
+    peerDependencies:
+      svelte: '>=3.23.0 || ^5.0.0-next.0'
 
   svelte-eslint-parser@0.41.1:
     resolution: {integrity: sha512-08ndI6zTghzI8SuJAFpvMbA/haPSGn3xz19pjre19yYMw8Nw/wQJ2PrZBI/L8ijGTgtkWCQQiLLy+Z1tfaCwNA==}
@@ -7644,6 +7652,10 @@ snapshots:
       typescript: 5.6.2
     transitivePeerDependencies:
       - picomatch
+
+  svelte-dnd-action@0.9.60(svelte@4.2.19):
+    dependencies:
+      svelte: 4.2.19
 
   svelte-eslint-parser@0.41.1(svelte@4.2.19):
     dependencies:

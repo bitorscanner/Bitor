@@ -28,7 +28,7 @@
 	<div class="flex flex-col items-center justify-center px-6 pt-8 mx-auto h-screen xl:px-0">
 		<div class="block md:max-w-lg mb-8 relative">
 			<img 
-				src="/images/Orbit_White_Logo.png" 
+				src="/images/Bitor_White_Logo.png" 
 				alt="Orbit Logo" 
 				class="w-auto h-24 mx-auto mb-4 object-contain animate-pulse drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]" 
 			/>

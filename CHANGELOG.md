@@ -152,4 +152,27 @@ First release of the Orbit Scanner.
   - Log the number of rules found and matching channels
   - Log when notifications are skipped due to missing rules
 
+## [0.5.4] - 2024-03-28
+
+### Added
+- Added drag and drop functionality to dashboard components
+- Added persistent dashboard layout with localStorage support
+- Added visual feedback for dragging dashboard components
+- Added responsive grid layout for dashboard components
+- Added smooth animations for dashboard component reordering
+
+### Changed
+- Updated dashboard layout to be fully customizable
+- Improved dashboard component organization with drag handles
+- Enhanced dashboard UI with better visual feedback during interactions
+- Updated component styling with modern glass-like effects
+- Improved dark mode support in dashboard components
+
+### Fixed
+- Fixed findings status filtering in the backend
+- Fixed error handling in RecentFindings component
+- Fixed VulnerabilitiesByClient component error states
+- Fixed dashboard component loading states
+- Fixed TypeScript errors in dashboard components
+
  

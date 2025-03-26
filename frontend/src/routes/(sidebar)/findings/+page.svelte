@@ -97,6 +97,27 @@
     let clientFilter: string[] = [];
     let searchTerm = '';
     let searchField = '';
+    let statusFilter: string[] = [];
+    let isAdmin = $pocketbase.authStore.isAdmin;
+    let showMyFindingsOnly = !isAdmin; // Default to true for non-admins
+    
+    // User filter dropdown state
+    let userFilterValue = showMyFindingsOnly ? 'mine' : 'all';
+    
+    // Function to handle user filter dropdown changes
+    function handleUserFilterChange() {
+      // Don't allow filtering for super admin
+      if (isAdmin) {
+        showMyFindingsOnly = false;
+        userFilterValue = 'all';
+        return;
+      }
+      showMyFindingsOnly = userFilterValue === 'mine';
+      applyFilters();
+    }
+  
+    // Current user ID for filtering
+    let currentUserId = $pocketbase.authStore.model?.id ?? '';
   
     // Clients list for filtering
     let clients: { id: string; name: string }[] = [];
@@ -189,7 +210,7 @@
         isLoading = true;
   
         // Check cache first
-        const cacheKey = `${currentPage}-${sortField}-${sortDirection}-${JSON.stringify(severityFilter)}-${JSON.stringify(clientFilter)}-${searchTerm}-${searchField}-${JSON.stringify(statusFilter)}`;
+        const cacheKey = `${currentPage}-${sortField}-${sortDirection}-${JSON.stringify(severityFilter)}-${JSON.stringify(clientFilter)}-${searchTerm}-${searchField}-${JSON.stringify(statusFilter)}-${showMyFindingsOnly}`;
         const now = Date.now();
         
         if (cachedFindings.has(cacheKey) && (now - lastFetchTimestamp) < cacheTimeout) {
@@ -231,6 +252,11 @@
           statusFilter.forEach((status) => {
             params.append('status', status);
           });
+        }
+
+        // Filter by current user if selected and not super admin
+        if (showMyFindingsOnly && !isAdmin && currentUserId) {
+          params.append('created_by', currentUserId);
         }
   
         // Include sorting parameters if your backend supports them
@@ -311,13 +337,16 @@
             
             try {
               const clientsBatch = await $pocketbase.collection('clients').getList(1, batchSize, {
-                filter: batchFilter
+                filter: batchFilter,
+                fields: 'id,name,favicon,collectionId,collectionName'
               });
               
               clientsBatch.items.forEach(client => {
+                const faviconUrl = client.favicon ? $pocketbase.files.getUrl(client, client.favicon) : null;
                 clientsData.set(client.id, {
-                  ...client,
-                  favicon: client.favicon ? $pocketbase.getFileUrl(client, client.favicon) : null
+                  id: client.id,
+                  name: client.name,
+                  favicon: faviconUrl
                 });
               });
             } catch (error: unknown) {
@@ -329,13 +358,13 @@
           // Map the findings data with optimized client data
           groupedFindings = data.items.map((group: GroupedFindings) => ({
             ...group,
-            findings: group.findings.map((finding: Finding) => ({
-              ...finding,
-              client: finding.client?.id ? {
-                ...finding.client,
-                ...clientsData.get(finding.client.id)
-              } : null
-            }))
+            findings: group.findings.map((finding: Finding) => {
+              const clientData = finding.client?.id ? clientsData.get(finding.client.id) : null;
+              return {
+                ...finding,
+                client: clientData || finding.client
+              };
+            })
           }));
   
         } finally {
@@ -495,7 +524,20 @@
 
       // Load other data
       await fetchClients();
-      await loadDefaultFilters();
+      
+      // Try to load saved filters first
+      try {
+        await loadDefaultFilters();
+      } catch (error) {
+        console.error('Error loading default filters:', error);
+        // If loading saved filters fails, use default values
+        if (!isAdmin) {
+          showMyFindingsOnly = true;
+          userFilterValue = 'mine';
+        }
+      }
+      
+      // Fetch findings with current filter settings
       await fetchGroupedFindings();
     });
 
@@ -520,9 +562,7 @@
     let falsePositiveFilter: boolean = false;
     let acknowledgedFilter: boolean = false;
 
-    // Status filter variables
-    let statusFilter: string[] = [];
-
+    // Status options - removed duplicate statusFilter declaration
     const statusOptions = [
       { value: 'acknowledged', name: 'Acknowledged' },
       { value: 'false_positive', name: 'False Positive' },
@@ -735,6 +775,9 @@
         severity: string[];
         client: string[];
         status: string[];
+        myFindingsOnly?: boolean;
+        sortField?: string;
+        sortDirection?: 'asc' | 'desc';
       };
       admin_id?: string;
       users_relation?: string;
@@ -745,7 +788,6 @@
 
     async function loadDefaultFilters() {
       try {
-        const isAdmin = $pocketbase.authStore.isAdmin;
         const userId = $pocketbase.authStore.model?.id;
         if (!userId) return;
 
@@ -762,11 +804,24 @@
           if (filters.severity) severityFilter = filters.severity;
           if (filters.client) clientFilter = filters.client;
           if (filters.status) statusFilter = filters.status;
-          await fetchGroupedFindings();
+          if (filters.myFindingsOnly !== undefined) {
+            // For non-admins, always default to showing only their findings
+            showMyFindingsOnly = isAdmin ? filters.myFindingsOnly : true;
+            userFilterValue = showMyFindingsOnly ? 'mine' : 'all';
+          }
+        } else if (!isAdmin) {
+          // If no saved preferences and not admin, default to user's findings
+          showMyFindingsOnly = true;
+          userFilterValue = 'mine';
         }
       } catch (error: unknown) {
         if (error && typeof error === 'object' && 'status' in error && error.status !== 404) {
           console.error('Error loading default filters:', error);
+        }
+        // If there's an error and user is not admin, default to user's findings
+        if (!isAdmin) {
+          showMyFindingsOnly = true;
+          userFilterValue = 'mine';
         }
       }
     }
@@ -787,7 +842,10 @@
         const filters: UserPreferences['findings_filters'] = {
           severity: severityFilter,
           client: clientFilter,
-          status: statusFilter
+          status: statusFilter,
+          myFindingsOnly: showMyFindingsOnly,
+          sortField,
+          sortDirection
         };
 
         let record;
@@ -831,12 +889,20 @@
     }
 
     function exportHostsFromGroup(group: GroupedFindings) {
-      // Extract unique hosts and IPs from the group
-      const hostData = group.findings.map(finding => `${finding.host},${finding.ip}`);
-      const uniqueHostData = [...new Set(hostData)];
+      // Extract unique host, IP, and client combinations from the group
+      const hostData = group.findings.map(finding => ({
+        host: finding.host,
+        ip: finding.ip,
+        client: finding.client?.name || 'N/A'
+      }));
+
+      // Remove duplicates by creating a unique string for each combination
+      const uniqueHostData = Array.from(new Set(
+        hostData.map(data => `${data.host},${data.ip},${data.client}`)
+      ));
       
-      // Create CSV content
-      const csvContent = 'Host,IP\n' + uniqueHostData.join('\n');
+      // Create CSV content with headers
+      const csvContent = 'Host,IP,Client\n' + uniqueHostData.join('\n');
       
       // Create blob and download
       const blob = new Blob([csvContent], { type: 'text/csv' });
@@ -853,6 +919,16 @@
     // Fix the loadFindings reference
     async function refreshFindings() {
       await fetchGroupedFindings();
+    }
+
+    // Add this helper function before the onMount function
+    function getUniqueClientsInfo(findings: Finding[]) {
+      const uniqueClients = new Set(findings.map(f => f.client?.id).filter(Boolean));
+      const firstClient = findings[0]?.client;
+      return {
+        count: uniqueClients.size,
+        firstClient
+      };
     }
   </script>
   
@@ -899,6 +975,23 @@
         />
       </div>
   
+      <!-- Replace checkbox with dropdown -->
+      <div class="flex flex-col">
+        <label for="userFilter">User Filter:</label>
+        <Select
+          id="userFilter"
+          bind:value={userFilterValue}
+          class="w-64"
+          on:change={handleUserFilterChange}
+          disabled={isAdmin}
+        >
+          <option value="all">All Findings</option>
+          <option value="mine">My Findings Only</option>
+        </Select>
+        {#if isAdmin}
+          <p class="text-sm text-gray-500 mt-1">User filtering is not available for super admins</p>
+        {/if}
+      </div>
   
       <!-- Search Input -->
       <div class="flex flex-col">
@@ -1084,11 +1177,15 @@
                   <span>
                     Client: 
                     {#if group.findings[0].client}
+                      {@const clientInfo = getUniqueClientsInfo(group.findings)}
                       <div class="flex items-center gap-2 inline-flex">
-                        {#if group.findings[0].client.favicon}
-                          <img src={group.findings[0].client.favicon} alt="{group.findings[0].client.name} Favicon" class="h-4 w-4" />
+                        {#if clientInfo.firstClient.favicon}
+                          <img src={clientInfo.firstClient.favicon} alt="{clientInfo.firstClient.name} Favicon" class="h-4 w-4" />
                         {/if}
-                        {group.findings[0].client.name}
+                        {clientInfo.firstClient.name}
+                        {#if clientInfo.count > 1}
+                          <span class="text-xs text-gray-500 dark:text-gray-400">(+{clientInfo.count - 1} other {clientInfo.count === 2 ? 'client' : 'clients'})</span>
+                        {/if}
                       </div>
                     {:else}
                       N/A
@@ -1180,9 +1277,21 @@
                     </div>
 
                     <!-- View Details Button -->
-                    <Button size="xs" on:click={() => openModal(finding)}>
-                      View Details
-                    </Button>
+                    <div class="flex items-center gap-2">
+                      {#if finding.client}
+                        <div class="flex items-center gap-2">
+                          {#if finding.client.favicon}
+                            <img src={finding.client.favicon} alt="{finding.client.name} Favicon" class="h-4 w-4" />
+                          {/if}
+                          <span class="text-sm text-gray-500 dark:text-gray-400">
+                            {finding.client.name}
+                          </span>
+                        </div>
+                      {/if}
+                      <Button size="xs" on:click={() => openModal(finding)}>
+                        View Details
+                      </Button>
+                    </div>
                   </li>
                 {/each}
               </ul>

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { pocketbase } from '@lib/stores/pocketbase';
-  import { Card, Heading, Accordion, AccordionItem, Skeleton } from 'flowbite-svelte';
+  import { Card, Heading, Accordion, AccordionItem, Skeleton, Button } from 'flowbite-svelte';
 
   interface Finding {
     id: string;
@@ -18,13 +18,30 @@
     findings: Finding[];
   }
 
+  interface APIFinding {
+    id?: string;
+    info?: { name?: string };
+    host?: string;
+    ip?: string;
+    severity?: string;
+    timestamp?: string;
+  }
+
+  interface APIGroupedFindings {
+    severity_order?: number;
+    severity?: string;
+    findings?: APIFinding[];
+  }
+
   let groupedFindings: GroupedFindings[] = [];
   let isLoading = false;
+  let error: string | null = null;
 
   // Fetch findings from the last 30 days
   async function fetchGroupedFindings() {
     try {
       isLoading = true;
+      error = null;
       const token = $pocketbase.authStore.token;
 
       const response = await fetch(
@@ -37,23 +54,53 @@
       );
 
       if (!response.ok) {
-        throw new Error(`Error: ${response.statusText}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || errorData.details || response.statusText);
       }
 
       const data = await response.json();
 
+      // If data is empty, set groupedFindings to empty array
+      if (!data || data.length === 0) {
+        groupedFindings = [];
+        return;
+      }
+
       // Filter out 'info' severity groups (case-insensitive)
-      const filteredData = data.filter(
-        (group) => group.severity.toLowerCase() !== 'info'
+      const filteredData = (data as APIGroupedFindings[]).filter(
+        (group) => group.severity?.toLowerCase() !== 'info'
       );
 
-      groupedFindings = filteredData.map((group) => ({
-        severity_order: group.severity_order,
-        severity: group.severity,
-        findings: group.findings,
+      groupedFindings = filteredData.map((group: APIGroupedFindings): GroupedFindings => ({
+        severity_order: group.severity_order || 5, // Default to lowest priority if missing
+        severity: group.severity || 'unknown',
+        findings: (group.findings || []).map((finding: APIFinding): Finding => ({
+          id: finding.id || '',
+          info: {
+            name: finding.info?.name || 'Unknown'
+          },
+          host: finding.host || 'Unknown Host',
+          ip: finding.ip || 'Unknown IP',
+          severity: finding.severity || 'unknown',
+          timestamp: finding.timestamp || new Date().toISOString()
+        }))
       }));
-    } catch (error) {
+
+      // Sort findings by timestamp (most recent first) within each group
+      groupedFindings.forEach((group: GroupedFindings) => {
+        group.findings.sort((a: Finding, b: Finding) => 
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+        );
+      });
+
+    } catch (error: unknown) {
       console.error('Error fetching findings:', error);
+      if (error instanceof Error) {
+        error = error.message;
+      } else {
+        error = 'Failed to fetch findings';
+      }
+      groupedFindings = [];
     } finally {
       isLoading = false;
     }
@@ -92,6 +139,11 @@
         <Skeleton key={index} class="h-16 w-full" />
       {/each}
     </div>
+  {:else if error}
+    <div class="p-4 text-center">
+      <p class="text-red-500">{error}</p>
+      <Button class="mt-4" on:click={fetchGroupedFindings}>Retry</Button>
+    </div>
   {:else if groupedFindings.length > 0}
     {#each groupedFindings as group}
       <Accordion flush={true}>
@@ -124,6 +176,8 @@
       </Accordion>
     {/each}
   {:else}
-    <p>No findings in the last 30 days.</p>
+    <div class="p-4 text-center text-gray-500">
+      <p>No findings in the last 30 days.</p>
+    </div>
   {/if}
 </Card>

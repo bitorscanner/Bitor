@@ -10,6 +10,7 @@
     export let showManualScans = false;
     export let showDestroyedScans = true;
     export let showArchivedScans = false;
+    export let showMyScansOnly = true;
 
     let showFilters = false; // Start collapsed by default
     const dispatch = createEventDispatcher();
@@ -59,7 +60,8 @@
             providers: selectedProviders,
             showManual: showManualScans,
             showDestroyed: showDestroyedScans,
-            showArchived: showArchivedScans
+            showArchived: showArchivedScans,
+            showMyScansOnly: showMyScansOnly
         });
     }
 
@@ -70,6 +72,7 @@
         showManualScans = false;
         showDestroyedScans = true;
         showArchivedScans = false;
+        showMyScansOnly = true;
         handleChange();
     }
 
@@ -81,6 +84,7 @@
         showManualScans;
         showDestroyedScans;
         showArchivedScans;
+        showMyScansOnly;
         handleChange();
     }
 </script>
@@ -153,6 +157,11 @@
             </div>
 
             <div class="flex items-center gap-4 mt-2 md:col-span-3">
+                <Checkbox bind:checked={showMyScansOnly} on:change={handleChange}>
+                    <span class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">
+                        Show My Scans Only
+                    </span>
+                </Checkbox>
                 <Checkbox bind:checked={showArchivedScans} on:change={handleChange}>
                     <span class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">
                         Show Archived Scans

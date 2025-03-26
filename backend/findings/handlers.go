@@ -15,6 +15,7 @@ import (
 	"github.com/pocketbase/dbx"
 
 	"github.com/labstack/echo/v5"
+	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/models"
 )
 
@@ -107,6 +108,9 @@ func HandleGroupedFindings(app *pocketbase.PocketBase) echo.HandlerFunc {
 		// Get status filters
 		statusFilters := c.QueryParams()["status"]
 
+		// Get created_by filter for user-specific findings
+		createdByFilter := c.QueryParam("created_by")
+
 		// Initialize conditions as a slice of dbx.Expression
 		var conditions []dbx.Expression
 
@@ -117,6 +121,11 @@ func HandleGroupedFindings(app *pocketbase.PocketBase) echo.HandlerFunc {
 
 		if len(clientFilters) > 0 {
 			conditions = append(conditions, dbx.In("client", stringSliceToInterfaceSlice(clientFilters)...))
+		}
+
+		// Add created_by filter if provided
+		if createdByFilter != "" {
+			conditions = append(conditions, dbx.HashExp{"created_by": createdByFilter})
 		}
 
 		if searchTerm != "" && searchField != "" {
@@ -383,13 +392,20 @@ func stringSliceToInterfaceSlice(strSlice []string) []interface{} {
 // Add a new handler function
 func HandleVulnerabilitiesByClient(app *pocketbase.PocketBase) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		// Get filter parameters if needed
+		// Get filter parameters
 		acknowledgedFilter := c.QueryParam("acknowledged")
 		falsePositiveFilter := c.QueryParam("false_positive")
+		userFilter := c.QueryParam("user_id")
 
 		// Build conditions
 		conditions := dbx.HashExp{}
 
+		// Add default status conditions to only show "open" findings
+		conditions["acknowledged"] = false
+		conditions["false_positive"] = false
+		conditions["remediated"] = false
+
+		// Override with specific filters if provided
 		if acknowledgedFilter != "" {
 			acknowledged, _ := strconv.ParseBool(acknowledgedFilter)
 			conditions["acknowledged"] = acknowledged
@@ -397,6 +413,16 @@ func HandleVulnerabilitiesByClient(app *pocketbase.PocketBase) echo.HandlerFunc 
 		if falsePositiveFilter != "" {
 			falsePositive, _ := strconv.ParseBool(falsePositiveFilter)
 			conditions["false_positive"] = falsePositive
+		}
+
+		// Get the current user from the context
+		user, _ := c.Get(apis.ContextAuthRecordKey).(*models.Record)
+		if user != nil && !user.GetBool("super_admin") {
+			// For non-admin users, always filter by their user ID
+			conditions["created_by"] = user.Id
+		} else if userFilter != "" {
+			// For admin users, respect the user_id filter if provided
+			conditions["created_by"] = userFilter
 		}
 
 		// Exclude 'info' severity from the query
@@ -412,12 +438,8 @@ func HandleVulnerabilitiesByClient(app *pocketbase.PocketBase) echo.HandlerFunc 
 		allConditions := dbx.And(
 			clientCondition,
 			severityCondition,
+			conditions,
 		)
-
-		// If there are additional conditions, include them
-		if len(conditions) > 0 {
-			allConditions = dbx.And(allConditions, conditions)
-		}
 
 		// Query counts per client per severity
 		query := app.DB().
@@ -518,195 +540,127 @@ func HandleRecentFindings(app *pocketbase.PocketBase) echo.HandlerFunc {
 		// Calculate the date 30 days ago
 		thirtyDaysAgo := time.Now().AddDate(0, 0, -30)
 
-		// Build the query to fetch findings from the last 30 days, excluding 'info' severity
+		// Get the current user from the context
+		user, _ := c.Get(apis.ContextAuthRecordKey).(*models.Record)
+		if user == nil {
+			return c.JSON(http.StatusUnauthorized, map[string]interface{}{
+				"error": "User not found",
+			})
+		}
+
+		// Build conditions for the query
+		conditions := []dbx.Expression{
+			dbx.NewExp("timestamp >= {:thirtyDaysAgo}", dbx.Params{"thirtyDaysAgo": thirtyDaysAgo}),
+			// Exclude 'info' severity (case-insensitive)
+			dbx.Not(dbx.NewExp("LOWER(severity) = {:severity}", dbx.Params{"severity": "info"})),
+		}
+
+		// For non-admin users, add a condition to only show their findings
+		if !user.GetBool("super_admin") {
+			conditions = append(conditions, dbx.HashExp{"created_by": user.Id})
+		}
+
+		// Build the query to fetch findings from the last 30 days
 		findingsQuery := app.DB().
 			Select(
 				"severity",
 				"id",
-				"json_extract(info, '$.name') as info_name",
+				"info",
 				"host",
 				"ip",
 				"timestamp",
+				"CASE LOWER(severity) "+
+					"WHEN 'critical' THEN 1 "+
+					"WHEN 'high' THEN 2 "+
+					"WHEN 'medium' THEN 3 "+
+					"WHEN 'low' THEN 4 "+
+					"ELSE 5 END as severity_order",
 			).
 			From("nuclei_findings").
-			Where(dbx.And(
-				dbx.NewExp("timestamp >= {:thirtyDaysAgo}", dbx.Params{"thirtyDaysAgo": thirtyDaysAgo}),
-				// Exclude 'info' severity (case-insensitive)
-				dbx.Not(dbx.NewExp("LOWER(severity) = {:severity}", dbx.Params{"severity": "info"})),
-			))
+			Where(dbx.And(conditions...)).
+			OrderBy("severity_order ASC")
 
 		// Fetch the findings
 		var findings []struct {
-			Severity  string `db:"severity"`
-			ID        string `db:"id"`
-			InfoName  string `db:"info_name"`
-			Host      string `db:"host"`
-			IP        string `db:"ip"`
-			Timestamp string `db:"timestamp"`
+			Severity      string    `db:"severity"`
+			ID            string    `db:"id"`
+			Info          string    `db:"info"`
+			Host          string    `db:"host"`
+			IP            string    `db:"ip"`
+			Timestamp     time.Time `db:"timestamp"`
+			SeverityOrder int       `db:"severity_order"`
 		}
 
-		err := findingsQuery.All(&findings)
-		if err != nil {
-			log.Printf("Error executing findings query: %v", err)
+		if err := findingsQuery.All(&findings); err != nil {
+			log.Printf("Error fetching findings: %v", err)
 			return c.JSON(http.StatusInternalServerError, map[string]interface{}{
-				"error":   "Failed to get recent findings",
+				"error":   "Failed to fetch recent findings",
 				"details": err.Error(),
 			})
 		}
 
 		// Group findings by severity
 		groupedFindings := make(map[string][]map[string]interface{})
-		for _, finding := range findings {
-			severity := strings.Title(strings.ToLower(finding.Severity))
-			infoName := finding.InfoName
+		severityOrders := make(map[string]int)
 
-			groupedFindings[severity] = append(groupedFindings[severity], map[string]interface{}{
-				"id": finding.ID,
-				"info": map[string]string{
-					"name": infoName,
-				},
-				"host":      finding.Host,
-				"ip":        finding.IP,
-				"timestamp": finding.Timestamp,
-				"severity":  severity,
-			})
+		for _, f := range findings {
+			// Parse the info JSON
+			var info map[string]interface{}
+
+			// Handle empty or invalid info field
+			if f.Info == "" {
+				info = map[string]interface{}{
+					"name": "Unknown",
+				}
+			} else {
+				// Try to parse the JSON
+				if err := json.Unmarshal([]byte(f.Info), &info); err != nil {
+					log.Printf("Error parsing info JSON for finding %s: %v", f.ID, err)
+					// Use a default info map if parsing fails
+					info = map[string]interface{}{
+						"name": "Unknown",
+					}
+				}
+			}
+
+			// Ensure info.name exists
+			if _, ok := info["name"]; !ok {
+				info["name"] = "Unknown"
+			}
+
+			finding := map[string]interface{}{
+				"id":        f.ID,
+				"info":      info,
+				"host":      f.Host,
+				"ip":        f.IP,
+				"timestamp": f.Timestamp,
+				"severity":  f.Severity, // Add severity to each finding
+			}
+
+			severity := f.Severity
+			if severity == "" {
+				severity = "unknown"
+			}
+
+			groupedFindings[severity] = append(groupedFindings[severity], finding)
+			severityOrders[severity] = f.SeverityOrder
 		}
 
-		// Convert the grouped findings to a slice for JSON response
+		// Convert to array format expected by frontend
 		var result []map[string]interface{}
 		for severity, findings := range groupedFindings {
 			result = append(result, map[string]interface{}{
 				"severity":       severity,
-				"severity_order": getSeverityOrder(severity), // Include severity_order
+				"severity_order": severityOrders[severity],
 				"findings":       findings,
 			})
 		}
 
-		// Sort the result by severity order
+		// Sort by severity_order
 		sort.Slice(result, func(i, j int) bool {
 			return result[i]["severity_order"].(int) < result[j]["severity_order"].(int)
 		})
 
 		return c.JSON(http.StatusOK, result)
 	}
-}
-
-// Helper function to map severity to an order
-func getSeverityOrder(severity string) int {
-	switch strings.ToLower(severity) {
-	case "critical":
-		return 1
-	case "high":
-		return 2
-	case "medium":
-		return 3
-	case "low":
-		return 4
-	case "info":
-		return 5
-	default:
-		return 6 // Unknown severity
-	}
-}
-
-func (h *Handler) GetFindings(c echo.Context) error {
-	// Get query parameters
-	clientID := c.QueryParam("client")
-	if clientID == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "client parameter is required",
-		})
-	}
-
-	// Build filter
-	filter := fmt.Sprintf("client = '%s'", clientID)
-
-	// Get records
-	records, err := h.app.Dao().FindRecordsByFilter(
-		"nuclei_findings",
-		filter,
-		"created",
-		0,
-		-1,
-		nil,
-	)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": fmt.Sprintf("failed to get findings: %v", err),
-		})
-	}
-
-	// Convert records to findings
-	findings := make([]Finding, 0)
-	for _, record := range records {
-		finding := Finding{
-			ID:          record.Id,
-			Name:        record.GetString("name"),
-			Description: record.GetString("description"),
-			Severity:    record.GetString("severity"),
-			Type:        record.GetString("type"),
-			Tool:        record.GetString("tool"),
-			Host:        record.GetString("host"),
-			Status:      record.GetString("status"),
-			ClientID:    record.GetString("client"),
-			Hash:        record.GetString("hash"),
-		}
-
-		// Get scan_ids
-		scanIDsStr := record.GetString("scan_ids")
-		if scanIDsStr != "" {
-			var scanIDs []string
-			if err := json.Unmarshal([]byte(scanIDsStr), &scanIDs); err != nil {
-				h.logger.Printf("Error unmarshaling scan_ids for finding %s: %v", finding.ID, err)
-			} else {
-				finding.ScanIDs = scanIDs
-			}
-		}
-
-		findings = append(findings, finding)
-	}
-
-	return c.JSON(http.StatusOK, findings)
-}
-
-func (h *Handler) UpdateFindingStatus(c echo.Context) error {
-	// Get the finding ID from the URL
-	id := c.QueryParam("id")
-	if id == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "finding ID is required",
-		})
-	}
-
-	// Get the finding from the database
-	record, err := h.app.Dao().FindRecordById("nuclei_findings", id)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": fmt.Sprintf("failed to get finding: %v", err),
-		})
-	}
-
-	// Get the status from the request body
-	var req struct {
-		Status string `json:"status"`
-	}
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": fmt.Sprintf("failed to parse request body: %v", err),
-		})
-	}
-
-	// Update the status
-	record.Set("status", req.Status)
-
-	// Save the record
-	if err := h.app.Dao().SaveRecord(record); err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": fmt.Sprintf("failed to save finding: %v", err),
-		})
-	}
-
-	return c.JSON(http.StatusOK, map[string]string{
-		"message": "finding status updated successfully",
-	})
 }

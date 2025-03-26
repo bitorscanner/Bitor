@@ -122,6 +122,11 @@ func (fm *FindingManager) ProcessFinding(finding *models.Finding) (bool, error) 
 		resultRecord.Set(key, value)
 	}
 
+	// Set created_by field if available
+	if finding.CreatedBy != "" {
+		resultRecord.Set("created_by", finding.CreatedBy)
+	}
+
 	// Initialize scan_ids array with the current scan
 	scanIDsJSON, err := json.Marshal([]string{finding.ScanID})
 	if err == nil {
@@ -755,4 +760,92 @@ func getKeys(m map[string]interface{}) []string {
 		keys = append(keys, k)
 	}
 	return keys
+}
+
+// GetUserFindings returns findings for a specific user
+func (fm *FindingManager) GetUserFindings(userID string, filter string, sort string, page int, perPage int) ([]*pbModels.Record, error) {
+	if filter != "" {
+		filter = fmt.Sprintf("(%s) && created_by = {:userID}", filter)
+	} else {
+		filter = "created_by = {:userID}"
+	}
+
+	records, err := fm.app.Dao().FindRecordsByFilter(
+		"nuclei_findings",
+		filter,
+		sort,
+		(page-1)*perPage,
+		perPage,
+		dbx.Params{
+			"userID": userID,
+		},
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user findings: %v", err)
+	}
+
+	return records, nil
+}
+
+// GetUserFindingsCount returns the total count of findings for a specific user
+func (fm *FindingManager) GetUserFindingsCount(userID string, filter string) (int, error) {
+	if filter != "" {
+		filter = fmt.Sprintf("(%s) && created_by = {:userID}", filter)
+	} else {
+		filter = "created_by = {:userID}"
+	}
+
+	count, err := fm.app.Dao().FindRecordsByFilter(
+		"nuclei_findings",
+		filter,
+		"",
+		0,
+		-1,
+		dbx.Params{
+			"userID": userID,
+		},
+	)
+
+	if err != nil {
+		return 0, fmt.Errorf("failed to count user findings: %v", err)
+	}
+
+	return len(count), nil
+}
+
+// GetUserFindingsSummary returns a summary of findings for a specific user
+func (fm *FindingManager) GetUserFindingsSummary(userID string) (map[string]int, error) {
+	records, err := fm.app.Dao().FindRecordsByFilter(
+		"nuclei_findings",
+		"created_by = {:userID}",
+		"",
+		0,
+		-1,
+		dbx.Params{
+			"userID": userID,
+		},
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user findings: %v", err)
+	}
+
+	summary := map[string]int{
+		"critical": 0,
+		"high":     0,
+		"medium":   0,
+		"low":      0,
+		"info":     0,
+		"total":    len(records),
+	}
+
+	for _, record := range records {
+		severity := strings.ToLower(record.GetString("severity"))
+		if count, ok := summary[severity]; ok {
+			summary[severity] = count + 1
+		}
+	}
+
+	return summary, nil
 }

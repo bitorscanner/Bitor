@@ -96,14 +96,14 @@
 	<NavBrand href="/" class={list ? 'w-40' : 'lg:w-60'}>
 		<!-- Logo for Light Mode -->
 		<img
-			src="/images/Orbit-Main-Logo.png"
+			src="/images/Bitor_Main_Logo.png"
 			class="me-2.5 h-6 sm:h-8 block dark:hidden"
 			alt="Orbit Logo Light"
 		/>
 
 		<!-- Logo for Dark Mode -->
 		<img
-			src="/images/Orbit_White_Logo.png"
+			src="/images/Bitor_White_Logo.png"
 			class="me-2.5 h-6 sm:h-8 hidden dark:block"
 			alt="Orbit Logo Dark"
 		/>

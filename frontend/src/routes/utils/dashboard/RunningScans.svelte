@@ -14,13 +14,28 @@
   } from 'flowbite-svelte';
   import { format, differenceInSeconds } from 'date-fns';
 
-  let runningScans = [];
+  interface ScanData {
+    id: string;
+    name: string;
+    status: string;
+    start_time: string;
+  }
+
+  let runningScans: ScanData[] = [];
+  let currentUserId = $pocketbase.authStore.model?.id ?? '';
 
   async function fetchRunningScans() {
     try {
+      let filter = 'status="Running" || status="Generating" || status="Deploying"';
+      
+      // Always apply user filter for non-admin users
+      if (!$pocketbase.authStore.isAdmin) {
+        filter += ` && created_by = "${currentUserId}"`;
+      }
+
       const result = await $pocketbase.collection('nuclei_scans').getList(1, 50, {
-        filter: 'status="Running" || status="Generating" || status="Deploying"',
-        sort: '-start_time', // Optional: Sort by most recent
+        filter: filter,
+        sort: '-start_time',
       });
       runningScans = result.items;
     } catch (error) {

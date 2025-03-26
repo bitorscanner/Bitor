@@ -1,0 +1,5 @@
+{
+	"dependencies": {
+		"svelte-dnd-action": "^0.9.60"
+	}
+}

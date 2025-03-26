@@ -3,7 +3,7 @@
 	export let title = 'Sign in to platform';
 	export let site = {
 		name: 'Orbit',
-		img: '/images/Orbit-Main-Logo.png',
+		img: '/images/Bitor_Main_Logo.png',
 		link: '/',
 		imgAlt: 'Orbit Logo'
 	};

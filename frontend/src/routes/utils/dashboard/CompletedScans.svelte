@@ -14,15 +14,37 @@
   } from 'flowbite-svelte';
   import { format, differenceInSeconds, parseISO } from 'date-fns';
 
-  let completedScans = [];
+  interface ScanData {
+    id: string;
+    name: string;
+    status: string;
+    start_time: string;
+    end_time: string;
+  }
+
+  let completedScans: ScanData[] = [];
+  let currentUserId = $pocketbase.authStore.model?.id ?? '';
 
   async function fetchCompletedScans() {
     try {
+      let filter = 'status="Finished"';
+      
+      // Always apply user filter for non-admin users
+      if (!$pocketbase.authStore.isAdmin) {
+        filter += ` && created_by = "${currentUserId}"`;
+      }
+
       const result = await $pocketbase.collection('nuclei_scans').getList(1, 50, {
-        filter: 'status="Finished"',
-        sort: '-end_time', // Optional: Sort by most recent
+        filter: filter,
+        sort: '-end_time',
       });
-      completedScans = result.items;
+      completedScans = result.items.map(item => ({
+        id: item.id,
+        name: item.name,
+        status: item.status,
+        start_time: item.start_time,
+        end_time: item.end_time
+      }));
     } catch (error) {
       console.error('Error fetching completed scans:', error);
     }

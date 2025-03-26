@@ -2,7 +2,7 @@
 	import { afterNavigate } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
-	import { pocketbase } from '@lib/stores/pocketbase';
+	import { pocketbase } from '$lib/stores/pocketbase';
 	import { currentUser } from '$lib/stores/auth';
 
 	import {
@@ -36,7 +36,8 @@
 		BellSolid,
 		CogSolid,
 		ServerSolid,
-		GlobeSolid
+		GlobeSolid,
+		ShieldCheckSolid
 	} from 'flowbite-svelte-icons';
 
 	// Import the Target icon from lucide-svelte and Nuclei icon
@@ -82,6 +83,7 @@
 	$: posts = [
 		{ name: 'Dashboard', icon: ChartPieOutline, href: '/dashboard' },
 		{ name: 'Findings', icon: InboxFullSolid, href: '/findings' },
+		{ name: 'Breach Data', icon: ShieldCheckSolid, href: '/breachdata', disabled: true },
 		{ 
 			name: 'Attack Surface', 
 			icon: GlobeSolid,

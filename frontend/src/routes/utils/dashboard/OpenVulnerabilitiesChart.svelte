@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { pocketbase } from '@lib/stores/pocketbase';
-    import { Card, Chart, Heading } from 'flowbite-svelte';
+    import { Card, Chart, Heading, Checkbox } from 'flowbite-svelte';
     import type { ApexOptions } from 'apexcharts';
     
     // Import ApexCharts only in browser
@@ -58,6 +58,9 @@
       series: ChartSeries[];
     }
   
+    let showMyDataOnly = !$pocketbase.authStore.isAdmin;
+    let currentUserId = $pocketbase.authStore.model?.id ?? '';
+
     let chartOptions: ChartOptions = {
       chart: {
         type: 'bar',
@@ -107,11 +110,20 @@
   
     async function fetchOpenVulnerabilities() {
       try {
+        let filter = `
+          (severity = "critical" || severity = "high" || severity = "medium" || severity = "unknown")
+          && acknowledged = false
+          && false_positive = false
+          && remediated = false
+        `;
+
+        // Always apply user filter for non-admin users
+        if (!$pocketbase.authStore.isAdmin) {
+          filter += ` && created_by = "${currentUserId}"`;
+        }
+
         const result = await $pocketbase.collection('nuclei_findings').getFullList(200, {
-          filter: `
-            (severity = "critical" || severity = "high" || severity = "medium" || severity = "unknown")
-            && (status = "open" || status = "")
-          `
+          filter: filter
         });
   
         const criticalCount = result.filter(item => item.severity === 'critical').length;
@@ -130,16 +142,17 @@
       }
     }
   
-    onMount(async () => {
-      if (typeof window !== 'undefined') {
-        const chartElement = document.querySelector('#openVulnerabilitiesChart');
-        if (chartElement && ApexCharts) {
-          chart = new ApexCharts(chartElement, chartOptions);
-          await chart.render();
-          await fetchOpenVulnerabilities();
-        }
-      }
+    onMount(() => {
+      fetchOpenVulnerabilities();
     });
+
+    $: {
+      // Refetch data when filter changes
+      showMyDataOnly;
+      if (chart) {
+        fetchOpenVulnerabilities();
+      }
+    }
   </script>
   
   <Card size="xl" class="w-full max-w-none 2xl:col-span-2">
@@ -150,6 +163,18 @@
           Vulnerabilities not acknowledged or marked as false positive
         </p>
       </div>
+      {#if !$pocketbase.authStore.isAdmin}
+        <div class="flex items-center">
+          <Checkbox 
+            bind:checked={showMyDataOnly}
+            class="mr-2"
+          >
+            <span class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">
+              Show My Data Only
+            </span>
+          </Checkbox>
+        </div>
+      {/if}
     </div>
   
     <div id="openVulnerabilitiesChart" class="w-full h-96"></div>

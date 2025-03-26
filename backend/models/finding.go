@@ -34,10 +34,11 @@ type Finding struct {
 	Response         string                 `json:"response"`
 	ExtractedResults []string               `json:"extracted_results"`
 	URL              string                 `json:"url"`
+	CreatedBy        string                 `json:"created_by"`
 }
 
 // NewFindingFromNuclei converts a NucleiFinding to our unified Finding structure
-func NewFindingFromNuclei(nucleiFinding NucleiFinding, clientID, scanID string) (*Finding, error) {
+func NewFindingFromNuclei(nucleiFinding NucleiFinding, clientID, scanID string, userID string) (*Finding, error) {
 	// Ensure template_id is not empty and properly set
 	templateID := nucleiFinding.TemplateID
 	if templateID == "" {
@@ -75,6 +76,7 @@ func NewFindingFromNuclei(nucleiFinding NucleiFinding, clientID, scanID string) 
 		Response:         nucleiFinding.Response,
 		ExtractedResults: nucleiFinding.ExtractedResults,
 		URL:              nucleiFinding.URL,
+		CreatedBy:        userID,
 	}
 
 	// Convert Info to map
@@ -157,6 +159,7 @@ func (f *Finding) ToMap() map[string]interface{} {
 		"response":       f.Response,
 		"url":            f.URL,
 		"first_seen":     time.Now().Format(time.RFC3339),
+		"created_by":     f.CreatedBy,
 	}
 
 	// Handle Info field

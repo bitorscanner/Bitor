@@ -19,7 +19,6 @@
   let currentChunk = 0;
   let totalChunks = 0;
   const chunkSize = 5 * 1024 * 1024; // 5MB chunks
-  const userToken = $pocketbase.authStore.token;
   const dispatch = createEventDispatcher();
 
   async function fetchClients() {
@@ -58,16 +57,27 @@
 
     while (retryCount < maxRetries) {
       try {
+        const token = $pocketbase.authStore.token;
+        if (!token) {
+          throw new Error('No authentication token found. Please log in again.');
+        }
+
         const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/scan/import-scan-results`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${userToken}`,
+            'Authorization': token,
           },
           body: formData
         });
 
         if (response.ok) {
           return response;
+        }
+
+        if (response.status === 401) {
+          // Redirect to login if unauthorized
+          window.location.href = '/authentication/sign-in';
+          throw new Error('Authentication failed. Please log in again.');
         }
 
         if (response.status === 403) {

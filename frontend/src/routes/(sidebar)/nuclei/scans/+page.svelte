@@ -26,7 +26,7 @@
     let showDeleteScanModal = false;
     let currentScanId = '';
     let selectedScanId = '';
-    let currentScanData = {};
+    let currentScanData: Record<string, unknown> = {};
     let showStartScanModal = false;
     let showStopScanModal = false;
     let currentScan: ScanData | null = null;
@@ -45,6 +45,7 @@
     let showManualScans = false;
     let showDestroyedScans = true;
     let showArchivedScans = false;
+    let showMyScansOnly = true;
     let filterStatuses: string[] = [];
     let filterClients: string[] = [];
     let filterProviders: string[] = [];
@@ -60,6 +61,11 @@
     // Add after other state variables
     let selectedScans: string[] = [];
     let selectAll = false;
+
+    // Add current user ID with proper type check
+    let currentUserId = $pocketbase.authStore.model?.id ?? '';
+
+    let userCache: Record<string, { name: string; username: string }> = {};
 
     const path: string = '/scans';
     const description: string = 'Nuclei scan management';
@@ -88,24 +94,30 @@
         nuclei_targets?: string;
         nuclei_interact?: string;
         nuclei_interact_name?: string;
-        client?: Client;
+        client?: {
+            id: string | null;
+            name: string;
+            api_key: string | null;
+            favicon: string;
+        };
         ansible_logs?: any[];
         state_bucket?: string;
         scan_bucket?: string;
-        cron?: string;
-        api_key?: string;
         ip_address?: string;
         cost?: number;
-        cost_per_hour?: number;
         vm_size?: string;
-        start_time_display?: string;
-        end_time_display?: string;
-        startImmediately?: boolean;
         archived?: boolean;
         vm_start_time?: string;
         vm_stop_time?: string;
+        cost_per_hour?: number;
+        created_by?: string;
+        created_by_name?: string;
+        start_time_display?: string;
+        end_time_display?: string;
         scan_profile?: string;
         frequency?: string;
+        cron?: string;
+        startImmediately?: boolean;
     }
 
     interface ScanFormData {
@@ -151,6 +163,26 @@
         }
     }
 
+    async function resolveUserName(userId: string): Promise<string> {
+        try {
+            // Check cache first
+            if (userCache[userId]) {
+                return userCache[userId].name || userCache[userId].username;
+            }
+
+            // Fetch user data if not in cache
+            const user = await $pocketbase.collection('users').getOne(userId);
+            userCache[userId] = {
+                name: user.name,
+                username: user.username
+            };
+            return user.name || user.username;
+        } catch (error) {
+            console.error('Error resolving user name:', error);
+            return 'Unknown';
+        }
+    }
+
     async function fetchScans() {
         try {
             const filter = buildFilter();
@@ -164,6 +196,18 @@
             
             totalPages = Math.ceil(result.totalItems / itemsPerPage);
             console.log('Total pages:', totalPages, 'Current page:', currentPage);
+            
+            // Create a set of unique user IDs
+            const userIds = new Set(result.items.map(scan => scan.created_by));
+            
+            // Fetch all user names in parallel
+            const userPromises = Array.from(userIds).map(async userId => {
+                const name = await resolveUserName(userId);
+                return [userId, name];
+            });
+            
+            // Wait for all user names to be resolved
+            const userNames = Object.fromEntries(await Promise.all(userPromises));
             
             scans = result.items.map(scan => ({
                 id: scan.id,
@@ -197,7 +241,9 @@
                 archived: scan.archived || false,
                 vm_start_time: scan.vm_start_time || '',
                 vm_stop_time: scan.vm_stop_time || '',
-                cost_per_hour: scan.cost_per_hour
+                cost_per_hour: scan.cost_per_hour,
+                created_by: scan.created_by || 'Unknown',
+                created_by_name: userNames[scan.created_by] || 'Unknown'
             }));
             
             paginatedScans = scans;
@@ -225,6 +271,11 @@
             filters.push('destroyed = false');
         }
 
+        // Filter by user's scans
+        if (showMyScansOnly && currentUserId) {
+            filters.push(`created_by = "${currentUserId}"`);
+        }
+
         // Filter by status
         if (filterStatuses.length > 0) {
             filters.push(`status ~ "${filterStatuses.join('||')}"`)
@@ -250,18 +301,16 @@
         showManual: boolean;
         showDestroyed: boolean;
         showArchived: boolean;
+        showMyScansOnly: boolean;
     }>) {
-        const { statuses, clients, providers, showManual, showDestroyed, showArchived } = event.detail;
-        
-        filterStatuses = statuses || [];
-        filterClients = clients || [];
-        filterProviders = providers || [];
-        showManualScans = showManual;
-        showDestroyedScans = showDestroyed;
-        showArchivedScans = showArchived;
-
-        // Reset to first page when filters change
-        currentPage = 1;
+        filterStatuses = event.detail.statuses;
+        filterClients = event.detail.clients;
+        filterProviders = event.detail.providers;
+        showManualScans = event.detail.showManual;
+        showDestroyedScans = event.detail.showDestroyed;
+        showArchivedScans = event.detail.showArchived;
+        showMyScansOnly = event.detail.showMyScansOnly;
+        currentPage = 1; // Reset to first page when filters change
         fetchScans();
     }
 
@@ -281,10 +330,12 @@
         }
     }
 
-    function openEditModal(scan: ScanData) {
-        currentScanData = { ...scan };
-        modalMode = 'edit';
-        showAddScanModal = true;
+    function openEditModal(scan: ScanData | null) {
+        if (scan) {
+            currentScanData = { ...scan };
+            modalMode = 'edit';
+            showAddScanModal = true;
+        }
     }
 
     async function handleScanSave(scanData: ScanFormData) {
@@ -297,7 +348,7 @@
 
             // Add initial status and creator
             createData.status = 'Created';
-            createData.created_by = $pocketbase.authStore.model.id;
+            createData.created_by = $pocketbase.authStore.model?.id || 'Unknown';
 
             console.log('Creating scan with data:', createData);
 
@@ -346,9 +397,11 @@
         }
     }
 
-    function openStartModal(scan: ScanData) {
-        currentScan = scan;
-        showStartScanModal = true;
+    function openStartModal(scan: ScanData | null) {
+        if (scan) {
+            currentScan = scan;
+            showStartScanModal = true;
+        }
     }
 
     function openStopModal(scan: ScanData) {
@@ -539,6 +592,8 @@
 
     async function destroyScan() {
         try {
+            if (!currentScan?.id) return;
+            
             const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/scan/destroy`, {
                 method: 'POST',
                 headers: {
@@ -563,9 +618,11 @@
         showDestroyModal = true;
     }
 
-    function openArchiveModal(scan: ScanData) {
-        currentScan = scan;
-        showArchiveModal = true;
+    function openArchiveModal(scan: ScanData | null) {
+        if (scan) {
+            currentScan = scan;
+            showArchiveModal = true;
+        }
     }
 
     async function archiveScan() {
@@ -698,9 +755,11 @@
         return scan && scan.status === 'Failed' && !scan.destroyed && scan.ip_address;
     });
 
-    function openLogModal(scan: ScanData) {
-        currentScan = scan;
-        showLogModal = true;
+    function openLogModal(scan: ScanData | null) {
+        if (scan) {
+            currentScan = scan;
+            showLogModal = true;
+        }
     }
 
     async function startScan() {
@@ -787,7 +846,7 @@
     <div class="flex gap-2 mb-4">
         <Button on:click={() => {
             modalMode = 'add';
-            currentScanData = null;
+            currentScanData = {};
             showAddScanModal = true;
         }}>Add Scan</Button>
 
@@ -798,11 +857,12 @@
 
     <div class="mb-4">
         <ScanFilters
-            bind:showDestroyedScans
-            bind:showManualScans
-            bind:showArchivedScans
-            {providers}
             {clients}
+            {providers}
+            bind:showManualScans
+            bind:showDestroyedScans
+            bind:showArchivedScans
+            bind:showMyScansOnly
             on:filterChange={handleFilterChange}
         />
     </div>
@@ -838,7 +898,7 @@
             <TableHeadCell class="w-4 p-4">
                 <Checkbox on:change={handleSelectAll} checked={selectAll} />
             </TableHeadCell>
-            {#each ['Name', 'Status', 'Start Time', 'End Time', 'Profile', 'Provider', 'Client', 'IP Address', 'Cost', 'Actions'] as title}
+            {#each ['Name', 'Status', 'Start Time', 'End Time', 'Profile', 'Provider', 'Client', 'IP Address', 'Cost', 'Created By', 'Actions'] as title}
                 <TableHeadCell class="ps-4 font-normal">{title}</TableHeadCell>
             {/each}
         </TableHead>
@@ -880,11 +940,11 @@
                         {#if scan.vm_provider}
                             <div class="flex items-center gap-2">
                                 {#if providers.find(p => p.id === scan.vm_provider)?.provider_type === 'digitalocean'}
-                                    <SiDigitalocean class="w-6 h-6" />
+                                    <SiDigitalocean size={24} />
                                 {:else if providers.find(p => p.id === scan.vm_provider)?.provider_type === 'aws'}
-                                    <SiAmazon class="w-6 h-6" />
+                                    <SiAmazon size={24} />
                                 {:else if providers.find(p => p.id === scan.vm_provider)?.provider_type === 's3'}
-                                    <SiAmazons3 class="w-6 h-6" />
+                                    <SiAmazons3 size={24} />
                                 {/if}
                                 <span>{scan.vm_provider_name || 'N/A'}</span>
                             </div>
@@ -916,14 +976,15 @@
                             <span class="text-gray-500">N/A</span>
                         {/if}
                     </TableBodyCell>
+                    <TableBodyCell class="p-4">{scan.created_by_name}</TableBodyCell>
                     <TableBodyCell class="space-x-1 p-2 flex flex-wrap gap-1">
                         {#if scan.status === 'Created'}
-                            <Button size="xs" class="gap-1 px-2" on:click={() => openLogModal(scan)}>
+                            <Button size="xs" on:click={() => openLogModal(scan)}>
                                 <BookOpenSolid class="w-4 h-4" />
                             </Button>
-                            <Button size="xs" class="gap-1 px-2" on:click={() => openStartModal(scan)}>Start</Button>
-                            <Button size="xs" class="gap-1 px-2" on:click={() => openEditModal(scan)}>Edit</Button>
-                            <Button color="red" size="xs" class="gap-1 px-2" on:click={() => openArchiveModal(scan)}>
+                            <Button size="xs" on:click={() => openStartModal(scan)}>Start</Button>
+                            <Button size="xs" on:click={() => openEditModal(scan)}>Edit</Button>
+                            <Button color="red" size="xs" on:click={() => openArchiveModal(scan)}>
                                 Archive
                             </Button>
                             {#if $pocketbase.authStore.isAdmin}
@@ -932,32 +993,32 @@
                                 </Button>
                             {/if}
                         {:else if ['Started', 'Generating', 'Deploying', 'Running'].includes(scan.status)}
-                            <Button size="xs" class="gap-1 px-2" on:click={() => openLogModal(scan)}>
+                            <Button size="xs" on:click={() => openLogModal(scan)}>
                                 <BookOpenSolid class="w-4 h-4" />
                             </Button>
-                            <Button size="xs" class="gap-1 px-2" on:click={() => openTerminalModal(scan)}>
+                            <Button size="xs" on:click={() => openTerminalModal(scan)}>
                                 <TerminalSolid class="w-4 h-4" />
                             </Button>
-                            <Button size="xs" class="gap-1 px-2" on:click={() => openStopModal(scan)}>Stop</Button>
+                            <Button size="xs" on:click={() => openStopModal(scan)}>Stop</Button>
                             {#if $pocketbase.authStore.isAdmin}
                                 <Button color="red" size="xs" on:click={() => openDeleteModal(scan.id)}>
                                     Delete
                                 </Button>
                             {/if}
                         {:else if scan.status === 'Manual'}
-                            <Button color="red" size="xs" class="gap-1 px-2" on:click={() => openArchiveModal(scan)}>
+                            <Button color="red" size="xs" on:click={() => openArchiveModal(scan)}>
                                 Archive
                             </Button>
-                            <Button size="xs" class="gap-1 px-2" on:click={() => openLogModal(scan)}>
+                            <Button size="xs" on:click={() => openLogModal(scan)}>
                                 <BookOpenSolid class="w-4 h-4" />
                             </Button>
-                            <Button size="xs" class="gap-1 px-2" on:click={() => openResultsModal(scan)}>
+                            <Button size="xs" on:click={() => openResultsModal(scan)}>
                                 Results
                             </Button>
-                            <Button size="xs" class="gap-1 px-2" on:click={() => openEditModal(scan)}>
+                            <Button size="xs" on:click={() => openEditModal(scan)}>
                                 Copy
                             </Button>
-                            <Button color="red" size="xs" class="gap-1 px-2" on:click={() => openArchiveModal(scan)}>
+                            <Button color="red" size="xs" on:click={() => openArchiveModal(scan)}>
                                 Archive
                             </Button>
                             {#if $pocketbase.authStore.isAdmin}
@@ -966,18 +1027,18 @@
                                 </Button>
                             {/if}
                         {:else if ['Finished', 'Stopped'].includes(scan.status)}
-                            <Button size="xs" class="gap-1 px-2" on:click={() => openLogModal(scan)}>
+                            <Button size="xs" on:click={() => openLogModal(scan)}>
                                 <BookOpenSolid class="w-4 h-4" />
                             </Button>
                             {#if scan.status === 'Finished'}
-                                <Button size="xs" class="gap-1 px-2" on:click={() => openResultsModal(scan)}>
+                                <Button size="xs" on:click={() => openResultsModal(scan)}>
                                     Results
                                 </Button>
                             {/if}
-                            <Button size="xs" class="gap-1 px-2" on:click={() => openEditModal(scan)}>
+                            <Button size="xs" on:click={() => openEditModal(scan)}>
                                 Copy
                             </Button>
-                            <Button color="red" size="xs" class="gap-1 px-2" on:click={() => openArchiveModal(scan)}>
+                            <Button color="red" size="xs" on:click={() => openArchiveModal(scan)}>
                                 Archive
                             </Button>
                             {#if $pocketbase.authStore.isAdmin}
@@ -986,18 +1047,18 @@
                                 </Button>
                             {/if}
                         {:else if scan.status === 'Failed' && !scan.destroyed}
-                            <Button size="xs" class="gap-1 px-2" on:click={() => openLogModal(scan)}>
+                            <Button size="xs" on:click={() => openLogModal(scan)}>
                                 <BookOpenSolid class="w-4 h-4" />
                             </Button>
-                            <Button size="xs" class="gap-1 px-2" on:click={() => openTerminalModal(scan)}>
+                            <Button size="xs" on:click={() => openTerminalModal(scan)}>
                                 <TerminalSolid class="w-4 h-4" />
                             </Button>
                             {#if scan.ip_address}
-                                <Button color="red" size="xs" class="gap-1 px-2" on:click={() => openDestroyModal(scan)}>
+                                <Button color="red" size="xs" on:click={() => openDestroyModal(scan)}>
                                     Destroy
                                 </Button>
                             {/if}
-                            <Button color="red" size="xs" class="gap-1 px-2" on:click={() => openArchiveModal(scan)}>
+                            <Button color="red" size="xs" on:click={() => openArchiveModal(scan)}>
                                 Archive
                             </Button>
                             {#if $pocketbase.authStore.isAdmin}
@@ -1062,9 +1123,6 @@
     <ResultsModal bind:open={showResultsModal} scanId={currentScan?.id || ''} />
     <TerminalModal bind:open={showTerminalModal} scanId={currentScan?.id || ''} />
     <DestroyScan bind:open={showDestroyModal} onDestroy={destroyScan} />
-
-    <!-- Include the ManualScanModal component -->
     <ManualScanModal bind:open={showManualScanModal} on:import={handleManualImport} />
-
 </main>
 

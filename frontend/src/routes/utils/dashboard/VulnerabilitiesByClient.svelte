@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { get } from 'svelte/store';
   import { pocketbase } from '@lib/stores/pocketbase';
-  import { Card, Heading } from 'flowbite-svelte';
+  import { Card, Heading, Checkbox } from 'flowbite-svelte';
   import { Bar } from 'svelte-chartjs';
   import type { ChartConfiguration } from 'chart.js';
   import {
@@ -40,13 +40,21 @@
   let chartData: ChartConfiguration;
   let error = '';
   let isLoading = true;
+  let showMyDataOnly = !$pocketbase.authStore.isAdmin;
+  let currentUserId = $pocketbase.authStore.model?.id ?? '';
 
   async function fetchVulnerabilitiesByClient() {
     try {
       const token = get(pocketbase).authStore.token;
+      const params = new URLSearchParams();
+      
+      // Always apply user filter for non-admin users
+      if (!$pocketbase.authStore.isAdmin) {
+        params.append('user_id', currentUserId);
+      }
 
       const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/findings/by-client`,
+        `${import.meta.env.VITE_API_BASE_URL}/api/findings/by-client?${params.toString()}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -59,6 +67,13 @@
       }
 
       const data = await response.json();
+
+      // If no data is returned, set vulnerabilitiesByClient to empty array
+      if (!data || data.length === 0) {
+        vulnerabilitiesByClient = [];
+        error = '';
+        return;
+      }
 
       // Fetch full client data for each client
       const clientsData = await Promise.all(
@@ -88,10 +103,11 @@
         total: item.total || 0,
       }));
 
+      error = '';
       prepareChartData();
     } catch (err) {
       console.error('Error fetching vulnerabilities by client:', err);
-      error = 'Failed to load data.';
+      error = showMyDataOnly ? 'No vulnerabilities found for your account.' : 'No vulnerabilities found.';
     } finally {
       isLoading = false;
     }
@@ -180,20 +196,42 @@
   onMount(() => {
     fetchVulnerabilitiesByClient();
   });
+
+  $: {
+    // Refetch data when filter changes
+    showMyDataOnly;
+    fetchVulnerabilitiesByClient();
+  }
 </script>
 
 <Card size="xl" class="w-full max-w-none">
   <div class="mb-4">
-    <Heading tag="h3" class="text-2xl">Vulnerabilities by Client</Heading>
-    <p class="text-base font-light text-gray-500">
-      Clients sorted by the number of open vulnerabilities
-    </p>
+    <div class="flex justify-between items-center">
+      <div>
+        <Heading tag="h3" class="text-2xl">Vulnerabilities by Client</Heading>
+        <p class="text-base font-light text-gray-500">
+          Clients sorted by the number of open vulnerabilities
+        </p>
+      </div>
+      {#if !$pocketbase.authStore.isAdmin}
+        <div class="flex items-center">
+          <Checkbox 
+            bind:checked={showMyDataOnly}
+            class="mr-2"
+          >
+            <span class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">
+              Show My Data Only
+            </span>
+          </Checkbox>
+        </div>
+      {/if}
+    </div>
   </div>
 
   {#if isLoading}
     <p class="text-center text-gray-500">Loading data...</p>
   {:else if error}
-    <p class="text-center text-red-500">{error}</p>
+    <p class="text-center text-gray-500">{error}</p>
   {:else if vulnerabilitiesByClient.length > 0}
     <div class="my-4">
       <div class="h-[350px] mb-0">
@@ -213,7 +251,7 @@
       </div>
     </div>
   {:else}
-    <p class="text-center text-gray-500">No data available to display.</p>
+    <p class="text-center text-gray-500">No vulnerabilities found {showMyDataOnly ? 'for your account' : ''}.</p>
   {/if}
 </Card>
 

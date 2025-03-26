@@ -60,6 +60,52 @@ func SetupEncryption(app *pocketbase.PocketBase) {
 
 		return nil
 	})
+
+	// Add hook for encrypting API keys before updates
+	app.OnModelBeforeUpdate().Add(func(e *core.ModelEvent) error {
+		collection, err := app.Dao().FindCollectionByNameOrId("api_keys")
+		if err != nil || collection == nil || e.Model.TableName() != collection.Name {
+			return nil
+		}
+
+		record := e.Model.(*models.Record)
+
+		// Encrypt key field
+		if key, ok := record.Get("key").(string); ok && key != "" {
+			// Check if the key is already encrypted by attempting to decrypt it
+			_, err := crypto.Decrypt(key, os.Getenv("API_ENCRYPTION_KEY"))
+			if err != nil {
+				// Key is not encrypted, so encrypt it
+				encryptedKey, err := crypto.Encrypt([]byte(key), os.Getenv("API_ENCRYPTION_KEY"))
+				if err != nil {
+					return fmt.Errorf("failed to encrypt key: %v", err)
+				}
+				record.Set("key", encryptedKey)
+			}
+			// If decryption succeeded, key is already encrypted, leave it as is
+		}
+
+		// Encrypt key_data field if it exists
+		if keyData, ok := record.Get("key_data").(map[string]interface{}); ok {
+			for k, v := range keyData {
+				if str, ok := v.(string); ok {
+					// Check if the value is already encrypted
+					_, err := crypto.Decrypt(str, os.Getenv("API_ENCRYPTION_KEY"))
+					if err != nil {
+						// Value is not encrypted, so encrypt it
+						encryptedStr, err := crypto.Encrypt([]byte(str), os.Getenv("API_ENCRYPTION_KEY"))
+						if err != nil {
+							return fmt.Errorf("failed to encrypt key_data value: %v", err)
+						}
+						keyData[k] = encryptedStr
+					}
+				}
+			}
+			record.Set("key_data", keyData)
+		}
+
+		return nil
+	})
 }
 
 type FileData struct {

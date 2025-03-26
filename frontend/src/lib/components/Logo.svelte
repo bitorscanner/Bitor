@@ -3,4 +3,4 @@
   export { className as class };
 </script>
 
-<img src="/images/Orbit-Main-Logo.png" alt="Orbit Logo" class={className} /> 
+<img src="/images/Bitor_Main_Logo.png" alt="Orbit Logo" class={className} /> 
