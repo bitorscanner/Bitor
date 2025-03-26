@@ -33,11 +33,11 @@ Bitor (formerly Orbit) is a powerful platform designed to facilitate large-scale
 
 ## Quick Start
 
-Visit [bitor.io](https://bitor.io) for comprehensive documentation, installation guides, and best practices.
+Visit [bitor.dev](https://bitor.dev) for comprehensive documentation, installation guides, and best practices.
 
 ## Development
 
-For development setup and contributing guidelines, please refer to our [Development Guide](https://bitor.io/development).
+For development setup and contributing guidelines, please refer to our [Development Guide](https://bitor.dev/development).
 
 ## License
 
@@ -45,7 +45,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Support
 
-- Documentation: [bitor.io](https://bitor.io)
+- Documentation: [bitor.dev](https://bitor.dev)
 - Issues: [GitHub Issues](https://github.com/orbitscanner/orbit/issues)
 - Discussions: [GitHub Discussions](https://github.com/orbitscanner/orbit/discussions)
 - Feature Requests: Please submit feature requests through [GitHub Issues](https://github.com/orbitscanner/orbit/issues/new?labels=enhancement&template=feature_request.md)
