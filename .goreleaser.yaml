@@ -6,7 +6,7 @@
 # yaml-language-server: $schema=https://goreleaser.com/static/schema.json
 # vim: set ts=2 sw=2 tw=0 fo=cnqoj
 
-project_name: orbit
+project_name: bitor
 
 before:
   hooks:
@@ -14,7 +14,7 @@ before:
 
 builds:
   - dir: backend
-    binary: orbit
+    binary: bitor
     env:
       - CGO_ENABLED=0
     goos:
@@ -73,7 +73,7 @@ changelog:
 release:
   github:
     owner: orbitscanner
-    name: orbit
+    name: bitor
   draft: false
   prerelease: auto
   mode: replace

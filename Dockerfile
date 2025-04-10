@@ -65,9 +65,9 @@ RUN chmod +x /docker-entrypoint.sh
 
 # Local stage - uses locally built binary
 FROM base AS local
-COPY --from=builder /build/orbit /app/orbit
+COPY --from=builder /build/bitor /app/bitor
 COPY backend/pb_public /app/pb_public
-RUN chmod +x /app/orbit
+RUN chmod +x /app/bitor
 ENTRYPOINT ["/docker-entrypoint.sh"]
 
 # GitHub release stage
@@ -75,13 +75,13 @@ FROM base AS github
 ARG TARGETARCH=x86_64
 ARG VERSION
 # Set a default version if none provided
-ENV ORBIT_VERSION=${VERSION:-v1.0.9}
-RUN echo "Downloading version: ${ORBIT_VERSION} for ${TARGETARCH}" && \
-    wget -O orbit.tar.gz \
-    "https://github.com/orbitscanner/orbit/releases/download/${ORBIT_VERSION}/orbit_${ORBIT_VERSION#v}_Linux_${TARGETARCH}.tar.gz" && \
-    tar xzf orbit.tar.gz && \
-    rm orbit.tar.gz && \
-    chmod +x orbit
+ENV BITOR_VERSION=${VERSION:-v1.0.9}
+RUN echo "Downloading version: ${BITOR_VERSION} for ${TARGETARCH}" && \
+    wget -O bitor.tar.gz \
+    "https://github.com/orbitscanner/bitor/releases/download/${BITOR_VERSION}/bitor_${BITOR_VERSION#v}_Linux_${TARGETARCH}.tar.gz" && \
+    tar xzf bitor.tar.gz && \
+    rm bitor.tar.gz && \
+    chmod +x bitor
 
 # Final stage - use --target=local for local builds
 FROM github AS final

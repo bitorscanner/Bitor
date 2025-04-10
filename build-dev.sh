@@ -23,7 +23,7 @@ export CI_COMMIT_TAG=""
 #   export CI_COMMIT_TAG=$(git describe --tags)
 # fi
 
-echo "Building Orbit with tag: DEVELOPMENT"
+echo "Building Bitor with tag: DEVELOPMENT"
 
 # Install pnpm if it's not installed
 if ! command -v pnpm &> /dev/null; then
@@ -45,7 +45,7 @@ echo "Tidying Go modules..."
 # Build backend
 echo "Building backend..."
 cd backend
-go build -o orbit
+go build -o bitor
 cd ..
 
 # Run goreleaser

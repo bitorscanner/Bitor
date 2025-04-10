@@ -12,4 +12,4 @@ fi
 export ANSIBLE_HOST_KEY_CHECKING=${ANSIBLE_HOST_KEY_CHECKING:-false}
 
 # Start the application
-cd /app && exec ./orbit serve --http 0.0.0.0:8090
+cd /app && exec ./bitor serve --http 0.0.0.0:8090

@@ -1,8 +1,8 @@
 version: '3.8'
 
 services:
-  orbit:
-    image: ghcr.io/orbitscanner/orbit:latest
+  bitor:
+    image: ghcr.io/orbitscanner/bitor:latest
     restart: unless-stopped
     environment:
       - API_ENCRYPTION_KEY=${API_ENCRYPTION_KEY:?API encryption key is required}
@@ -11,11 +11,11 @@ services:
       - ./nuclei-templates:/app/nuclei-templates
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.orbit.rule=Host(`${DOMAIN:-localhost}`)"
-      - "traefik.http.routers.orbit.entrypoints=websecure"
-      - "traefik.http.routers.orbit.tls=true"
-      - "traefik.http.routers.orbit.tls.certresolver=letsencrypt"
-      - "traefik.http.services.orbit.loadbalancer.server.port=8090"
+      - "traefik.http.routers.bitor.rule=Host(`${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.bitor.entrypoints=websecure"
+      - "traefik.http.routers.bitor.tls=true"
+      - "traefik.http.routers.bitor.tls.certresolver=letsencrypt"
+      - "traefik.http.services.bitor.loadbalancer.server.port=8090"
     networks:
       - orbit-net
 
@@ -32,7 +32,7 @@ services:
     networks:
       - orbit-net
     depends_on:
-      - orbit
+      - bitor
 
 networks:
   orbit-net:
