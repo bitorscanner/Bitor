@@ -47,7 +47,7 @@
 </Frame>
 
 <p class="my-10 text-center text-sm text-gray-500">
-	© 2024 <a href="https://orbitscanner.io/" class="hover:underline" target="_blank">
-		Orbit Scanner
+	© 2025 <a href="https://bitor.dev/" class="hover:underline" target="_blank">
+		Bitor Scanner
 	</a>. All rights reserved.
 </p>

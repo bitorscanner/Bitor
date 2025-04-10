@@ -113,9 +113,6 @@ importers:
       flowbite-svelte-blocks:
         specifier: ^1.1.3
         version: 1.1.3(rollup@4.24.0)(svelte@4.2.19)
-      flowbite-svelte-icons:
-        specifier: ^1.6.1
-        version: 1.6.1(svelte@4.2.19)(tailwind-merge@2.5.3)(tailwindcss@3.4.13)
       flowbite-typography:
         specifier: ^1.0.4
         version: 1.0.4(tailwindcss@3.4.13)
@@ -243,6 +240,9 @@ importers:
       flowbite-svelte:
         specifier: ^0.46.22
         version: 0.46.22(rollup@4.24.0)(svelte@4.2.19)
+      flowbite-svelte-icons:
+        specifier: ^1.6.1
+        version: 1.6.1(svelte@4.2.19)(tailwind-merge@2.5.3)(tailwindcss@3.4.13)
       globals:
         specifier: ^15.0.0
         version: 15.10.0

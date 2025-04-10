@@ -60,6 +60,7 @@
     extracted_results?: string[];
     severity_override?: string;
     severity_override_order?: number;
+    matcher_name?: string;
   }
 
   export let finding: Finding | null = null;
@@ -284,7 +285,7 @@
   // Function to handle content updates from the editor
   function handleNotesChange(newContent: string) {
     notesContent = newContent;
-    // Additional logic if needed
+    saveNotes();
   }
 
   // Function to handle manual toggle by user
@@ -768,6 +769,25 @@
                   options={terminalOptions}
                   on:load={onResponseLoad}
                 />
+              </div>
+            </AccordionItem>
+          {/if}
+
+          {#if finding.matcher_name}
+            <AccordionItem>
+              <svelte:fragment slot="header">
+                <span>Matcher Name</span>
+              </svelte:fragment>
+              <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div class="flex justify-between items-center">
+                  <code class="text-sm">{finding.matcher_name}</code>
+                  <Button
+                    size="xs"
+                    on:click={() => copyToClipboard(finding.matcher_name)}
+                  >
+                    Copy
+                  </Button>
+                </div>
               </div>
             </AccordionItem>
           {/if}

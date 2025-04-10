@@ -21,6 +21,7 @@
     import FindingModal from './FindingModal.svelte';
     import BulkCommentModal from './BulkCommentModal.svelte';
     import { CheckCircleSolid, DotsVerticalOutline } from 'flowbite-svelte-icons';
+    import AdvancedSearch from './AdvancedSearch.svelte';
   
     interface Finding {
       id: string;
@@ -106,12 +107,7 @@
     
     // Function to handle user filter dropdown changes
     function handleUserFilterChange() {
-      // Don't allow filtering for super admin
-      if (isAdmin) {
-        showMyFindingsOnly = false;
-        userFilterValue = 'all';
-        return;
-      }
+      // Non-admins can now see all findings if they choose
       showMyFindingsOnly = userFilterValue === 'mine';
       applyFilters();
     }
@@ -130,12 +126,12 @@
     let updateError = '';
   
     // Keep track of selected findings
-    $: selectedFindings = groupedFindings
+    $: selectedFindings = groupedFindings && Array.isArray(groupedFindings)
       ? groupedFindings.flatMap((group) => group.findings.filter((f) => f.selected))
       : [];
   
     // Update group selection when findings are selected
-    $: if (groupedFindings) {
+    $: if (groupedFindings && Array.isArray(groupedFindings)) {
       groupedFindings.forEach((group) => {
         // If all findings in a group are selected, mark the group as selected
         group.selected = group.findings.every((f) => f.selected);
@@ -143,7 +139,7 @@
     }
   
     // Update finding selections when a group is selected
-    $: if (groupedFindings) {
+    $: if (groupedFindings && Array.isArray(groupedFindings)) {
       groupedFindings.forEach((group) => {
         if (group.selected) {
           group.findings.forEach((finding) => (finding.selected = true));
@@ -203,6 +199,14 @@
     let cachedFindings = new Map<string, CachedData>();
     let lastFetchTimestamp = 0;
     let cacheTimeout = 30000; // 30 seconds cache
+  
+    // Add advanced filters
+    let advancedFilters: Array<{
+      field: string;
+      operator: string;
+      value: string | string[];
+      id: string;
+    }> = [];
   
     // Modify the fetchGroupedFindings function
     async function fetchGroupedFindings() {
@@ -318,13 +322,15 @@
   
           // Optimize client data fetching
           const clientIds = new Set<string>();
-          data.items.forEach((group: GroupedFindings) => {
-            group.findings.forEach((finding: Finding) => {
-              if (finding.client?.id) {
-                clientIds.add(finding.client.id);
-              }
+          if (data.items && Array.isArray(data.items)) {
+            data.items.forEach((group: GroupedFindings) => {
+              group.findings.forEach((finding: Finding) => {
+                if (finding.client?.id) {
+                  clientIds.add(finding.client.id);
+                }
+              });
             });
-          });
+          }
   
           // Batch fetch client data
           const clientsData = new Map<string, any>();
@@ -356,7 +362,7 @@
           }
   
           // Map the findings data with optimized client data
-          groupedFindings = data.items.map((group: GroupedFindings) => ({
+          groupedFindings = data.items && Array.isArray(data.items) ? data.items.map((group: GroupedFindings) => ({
             ...group,
             findings: group.findings.map((finding: Finding) => {
               const clientData = finding.client?.id ? clientsData.get(finding.client.id) : null;
@@ -365,7 +371,7 @@
                 client: clientData || finding.client
               };
             })
-          }));
+          })) : [];
   
         } finally {
           clearTimeout(timeoutId);
@@ -384,15 +390,17 @@
     }
   
     function initializeSelections(data: APIResponse) {
-      return data.items.map((group: GroupedFindings) => ({
-        ...group,
-        selected: false,
-        indeterminate: false,
-        findings: group.findings.map((finding: Finding) => ({
-          ...finding,
-          selected: false,
-        })),
-      }));
+      return data && data.items && Array.isArray(data.items) 
+        ? data.items.map((group: GroupedFindings) => ({
+            ...group,
+            selected: false,
+            indeterminate: false,
+            findings: group.findings.map((finding: Finding) => ({
+              ...finding,
+              selected: false,
+            })),
+          }))
+        : [];
     }
   
     function openModal(finding: Finding) {
@@ -411,9 +419,88 @@
     }
   
     async function applyFilters() {
-      // Reset to the first page when filters are applied
-      currentPage = 1;
-      await fetchGroupedFindings();
+      isLoading = true;
+      try {
+        let filter = '';
+        let conditions = [];
+
+        // Add severity filter
+        if (Array.isArray(severityFilter) && severityFilter.length > 0) {
+          conditions.push(`severity in [${severityFilter.map(s => `"${s}"`).join(',')}]`);
+        }
+
+        // Add client filter
+        if (Array.isArray(clientFilter) && clientFilter.length > 0) {
+          conditions.push(`client in [${clientFilter.join(',')}]`);
+        }
+
+        // Add status filters
+        if (Array.isArray(statusFilter) && statusFilter.length > 0) {
+          const statusConditions = statusFilter.map(status => {
+            switch (status) {
+              case 'acknowledged':
+                return 'acknowledged = true';
+              case 'false_positive':
+                return 'false_positive = true';
+              case 'remediated':
+                return 'remediated = true';
+              default:
+                return '';
+            }
+          }).filter(Boolean);
+          if (statusConditions.length > 0) {
+            conditions.push(`(${statusConditions.join(' || ')})`);
+          }
+        }
+
+        // Add search term
+        if (searchTerm) {
+          if (searchField) {
+            conditions.push(`${searchField} ~ "${searchTerm}"`);
+          } else {
+            conditions.push(`(host ~ "${searchTerm}" || ip ~ "${searchTerm}" || template_id ~ "${searchTerm}" || info_name ~ "${searchTerm}")`);
+          }
+        }
+
+        // Add user filter
+        if (showMyFindingsOnly && currentUserId) {
+          conditions.push(`created_by = "${currentUserId}"`);
+        }
+
+        // Add advanced filters
+        if (Array.isArray(advancedFilters)) {
+          advancedFilters.forEach(filter => {
+            switch (filter.operator) {
+              case 'equals':
+                conditions.push(`${filter.field} = "${filter.value}"`);
+                break;
+              case 'contains':
+                conditions.push(`${filter.field} ~ "${filter.value}"`);
+                break;
+              case 'in':
+                if (Array.isArray(filter.value)) {
+                  conditions.push(`${filter.field} in [${filter.value.map(v => `"${v}"`).join(',')}]`);
+                }
+                break;
+              case 'not_equals':
+                conditions.push(`${filter.field} != "${filter.value}"`);
+                break;
+            }
+          });
+        }
+
+        filter = conditions.join(' && ');
+
+        // Reset to the first page when filters are applied
+        currentPage = 1;
+        await fetchGroupedFindings();
+      } catch (error) {
+        console.error('Error applying filters:', error);
+        // Set groupedFindings to empty array in case of error
+        groupedFindings = [];
+      } finally {
+        isLoading = false;
+      }
     }
   
     function getSeverityColor(severity: string): string {
@@ -499,13 +586,15 @@
     }
 
     function clearSelections() {
-      groupedFindings.forEach(group => {
-        group.selected = false;
-        group.indeterminate = false;
-        group.findings.forEach(finding => {
-          finding.selected = false;
+      if (groupedFindings && Array.isArray(groupedFindings)) {
+        groupedFindings.forEach(group => {
+          group.selected = false;
+          group.indeterminate = false;
+          group.findings.forEach(finding => {
+            finding.selected = false;
+          });
         });
-      });
+      }
       selectedFindings = [];
     }
   
@@ -930,6 +1019,12 @@
         firstClient
       };
     }
+
+    // Handle advanced filter changes
+    function handleAdvancedFilterChange(event: CustomEvent<{ filters: typeof advancedFilters }>) {
+      advancedFilters = event.detail.filters;
+      applyFilters();
+    }
   </script>
   
   <Card size="xl" class="shadow-sm max-w-none">
@@ -939,92 +1034,27 @@
   
     <!-- Filter and Sort Form -->
     <form on:submit|preventDefault={applyFilters} class="flex flex-wrap gap-4 mb-4">
-      <!-- Severity Filter -->
-      <div class="flex flex-col">
-        <label for="severityFilter">Severity:</label>
-        <MultiSelect
-          id="severityFilter"
-          bind:value={severityFilter}
-          items={severityOptions}
-          placeholder="Select Severities"
-          class="w-64"
-        />
-      </div>
-  
-      <!-- Client Filter -->
-      <div class="flex flex-col">
-        <label for="clientFilter">Client:</label>
-        <MultiSelect
-          id="clientFilter"
-          bind:value={clientFilter}
-          items={clientOptions}
-          placeholder="Select Clients"
-          class="w-64"
-        />
-      </div>
+      <AdvancedSearch
+        {severityOptions}
+        {clientOptions}
+        {statusOptions}
+        {isAdmin}
+        bind:showMyFindingsOnly
+        on:change={({ detail }) => {
+          severityFilter = detail.severityFilter;
+          clientFilter = detail.clientFilter;
+          statusFilter = detail.statusFilter;
+          showMyFindingsOnly = detail.showMyFindingsOnly;
+          userFilterValue = detail.showMyFindingsOnly ? 'mine' : 'all';
+          searchTerm = detail.searchTerm;
+          searchField = detail.searchField;
+          advancedFilters = detail.filters;
+          applyFilters();
+        }}
+      />
 
-      <!-- Status Filter -->
-      <div class="flex flex-col">
-        <label for="statusFilter">Status:</label>
-        <MultiSelect
-          id="statusFilter"
-          bind:value={statusFilter}
-          items={statusOptions}
-          placeholder="Select Status"
-          class="w-64"
-        />
-      </div>
-  
-      <!-- Replace checkbox with dropdown -->
-      <div class="flex flex-col">
-        <label for="userFilter">User Filter:</label>
-        <Select
-          id="userFilter"
-          bind:value={userFilterValue}
-          class="w-64"
-          on:change={handleUserFilterChange}
-          disabled={isAdmin}
-        >
-          <option value="all">All Findings</option>
-          <option value="mine">My Findings Only</option>
-        </Select>
-        {#if isAdmin}
-          <p class="text-sm text-gray-500 mt-1">User filtering is not available for super admins</p>
-        {/if}
-      </div>
-  
-      <!-- Search Input -->
-      <div class="flex flex-col">
-        <label for="searchTerm">Search:</label>
-        <Input
-          id="searchTerm"
-          bind:value={searchTerm}
-          placeholder="Enter search term"
-          class="w-64"
-        />
-      </div>
-  
-      <!-- Fields to Search -->
-      <div class="flex flex-col">
-        <label for="searchField">Search Field:</label>
-        <Select
-          id="searchField"
-          bind:value={searchField}
-          placeholder="Search In:"
-          class="w-64"
-        >
-          <option value="">Select Field</option>
-          <option value="name">Name</option>
-          <option value="host">Host</option>
-          <option value="ip">IP Address</option>
-          <option value="template_id">Template ID</option>
-          <option value="scan_name">Scan Name</option>
-          <!-- Add other fields as needed -->
-        </Select>
-      </div>
-      <!-- Apply Filters Button -->
-      <div class="flex items-end space-x-2">
-        <Button type="submit">Apply Filters</Button>
+      <!-- Save as Default Button -->
+      <div class="w-full flex justify-end">
         <Button color="alternative" on:click={saveAsDefaultFilters}>Save as Default</Button>
       </div>
     </form>

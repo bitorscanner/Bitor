@@ -78,7 +78,7 @@ release:
   prerelease: auto
   mode: replace
   header: |
-    ## Orbit Scanner {{ .Tag }} ({{ .Date }})
+    ## Bitor Scanner {{ .Tag }} ({{ .Date }})
     
     For more information, please refer to [CHANGELOG.md](CHANGELOG.md).
   footer: |

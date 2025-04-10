@@ -5,6 +5,75 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.5] - 2024-05-01
+
+### Added
+- Added breach data section for improved threat intelligence
+- Added My Findings filter component for quicker access to personal findings
+- Added ability for non-admins to toggle between viewing all findings or just their own
+- Added drag and drop functionality to dashboard components (from 0.5.4)
+- Added persistent dashboard layout with localStorage support (from 0.5.4)
+- Added visual feedback for dragging dashboard components (from 0.5.4)
+- Added responsive grid layout for dashboard components (from 0.5.4)
+- Added smooth animations for dashboard component reordering (from 0.5.4)
+- Added optimized error handling in findings filters
+- Added findings default filter preferences to save user filter settings
+- Added improved performance for large findings datasets
+- Added Bitor branding and updated logos throughout the application
+- Added top-level user filter dropdown in findings page for easier access
+
+### Changed
+- Renamed application from Orbit Scanner to Bitor
+- Updated all logo assets and branding materials
+- Restructured nuclei scans and targets under a unified Nuclei section
+- Improved filtering system with more robust null checking
+- Updated dashboard layout to be fully customizable (from 0.5.4)
+- Improved dashboard component organization with drag handles (from 0.5.4)
+- Enhanced dashboard UI with better visual feedback during interactions (from 0.5.4)
+- Updated component styling with modern glass-like effects (from 0.5.4)
+- Improved findings page performance with optimized queries
+- Enhanced findings filtering with more user-friendly interface
+- Enhanced dark mode support in dashboard components (from 0.5.4)
+- Modified filter handling to be more resilient against null or undefined data
+
+### Fixed
+- Fixed error handling in findings components to prevent "Cannot read properties of null" issues
+- Fixed findings status filtering in the backend (from 0.5.4)
+- Fixed error handling in RecentFindings component (from 0.5.4)
+- Fixed VulnerabilitiesByClient component error states (from 0.5.4)
+- Fixed dashboard component loading states (from 0.5.4)
+- Fixed TypeScript errors in dashboard components (from 0.5.4)
+- Fixed My Findings filter to properly handle permissions for all user types
+- Fixed null reference errors in findings filtering and sorting
+- Fixed findings pagination issues
+- Fixed critical bug causing "Cannot read properties of null (reading 'forEach')" error in findings page
+- Fixed issue preventing non-admin users from seeing all findings
+- Fixed reactive declarations in the findings page to safely handle null or undefined values
+- Fixed edge cases in filter application when server returns unexpected data formats
+
+## [0.5.4] - 2024-03-28
+
+### Added
+- Added drag and drop functionality to dashboard components
+- Added persistent dashboard layout with localStorage support
+- Added visual feedback for dragging dashboard components
+- Added responsive grid layout for dashboard components
+- Added smooth animations for dashboard component reordering
+
+### Changed
+- Updated dashboard layout to be fully customizable
+- Improved dashboard component organization with drag handles
+- Enhanced dashboard UI with better visual feedback during interactions
+- Updated component styling with modern glass-like effects
+- Improved dark mode support in dashboard components
+
+### Fixed
+- Fixed findings status filtering in the backend
+- Fixed error handling in RecentFindings component
+- Fixed VulnerabilitiesByClient component error states
+- Fixed dashboard component loading states
+- Fixed TypeScript errors in dashboard components
+
 ## [0.5.3] - 2024-03-28
 
 ### Added
@@ -132,7 +201,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - User invitation system now properly sets passwords during account and user creation is complete.
 
 ## [0.5.0] - 2024-02-04
-First release of the Orbit Scanner.
+First release of the Bitor Scanner.
 
 ### Added
 - Basic scan functionality
@@ -151,28 +220,5 @@ First release of the Orbit Scanner.
   - Log when no enabled rules are found for an event
   - Log the number of rules found and matching channels
   - Log when notifications are skipped due to missing rules
-
-## [0.5.4] - 2024-03-28
-
-### Added
-- Added drag and drop functionality to dashboard components
-- Added persistent dashboard layout with localStorage support
-- Added visual feedback for dragging dashboard components
-- Added responsive grid layout for dashboard components
-- Added smooth animations for dashboard component reordering
-
-### Changed
-- Updated dashboard layout to be fully customizable
-- Improved dashboard component organization with drag handles
-- Enhanced dashboard UI with better visual feedback during interactions
-- Updated component styling with modern glass-like effects
-- Improved dark mode support in dashboard components
-
-### Fixed
-- Fixed findings status filtering in the backend
-- Fixed error handling in RecentFindings component
-- Fixed VulnerabilitiesByClient component error states
-- Fixed dashboard component loading states
-- Fixed TypeScript errors in dashboard components
 
  

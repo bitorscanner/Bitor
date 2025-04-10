@@ -83,7 +83,6 @@
 	$: posts = [
 		{ name: 'Dashboard', icon: ChartPieOutline, href: '/dashboard' },
 		{ name: 'Findings', icon: InboxFullSolid, href: '/findings' },
-		{ name: 'Breach Data', icon: ShieldCheckSolid, href: '/breachdata', disabled: true },
 		{ 
 			name: 'Attack Surface', 
 			icon: GlobeSolid,
@@ -169,7 +168,7 @@
 		},
 		{
 			label: 'Documentation',
-			href: 'https://orbitscanner.io',
+			href: 'https://bitor.dev',
 			icon: LifeSaverSolid
 		}
 	];
