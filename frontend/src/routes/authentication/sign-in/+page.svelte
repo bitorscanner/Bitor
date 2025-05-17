@@ -18,12 +18,12 @@
 	// 	}
 	// });
 
-	const title = 'Sign in to Orbit';
+	const title = 'Sign in to Bitor';
 	const site = {
-		name: 'Orbit',
+		name: 'Bitor',
 		img: '/images/Bitor_Main_Logo.png',
 		link: '/',
-		imgAlt: 'Orbit Logo'
+		imgAlt: 'Bitor Logo'
 	};
 	const rememberMe = false;
 	const lostPassword = false;

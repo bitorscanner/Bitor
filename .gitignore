@@ -212,7 +212,7 @@ build
 data
 
 backend/pb_data
-backend/orbit
+backend/bitor
 backend/pb_public/*
 !backend/pb_public/.gitkeep
 backend/ansible/keys

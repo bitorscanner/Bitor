@@ -59,15 +59,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Terraform](https://www.terraform.io/)
 - [PocketBase](https://pocketbase.io/)
 
-## Sponsored By
-
-<div align="center">
-  <a href="https://www.blackhillsinfosec.com/">
-    <img src="assets/BHIS-logo.png" alt="Black Hills Information Security" width="300">
-  </a>
-  <p>Proudly sponsored by <a href="https://www.blackhillsinfosec.com/">Black Hills Information Security</a></p>
-</div>
-
 ## Project Status
 
 Current status of supported providers and features:
@@ -98,34 +89,6 @@ Current status of supported providers and features:
 | Discord | 📝 Planned | Not yet implemented |
 | Email | 📝 Planned | Not yet implemented |
 | Telegram | 📝 Planned | Not yet implemented |
-
-### Discovery Services
-
-| Provider | Status | Notes |
-|----------|---------|--------|
-| AlienVault | 📝 Planned | Threat intelligence integration |
-| BinaryEdge | 📝 Planned | Internet security scanning |
-| BufferOver | 📝 Planned | DNS enumeration |
-| Censys | 📝 Planned | Attack surface management |
-| CertSpotter | 📝 Planned | SSL/TLS monitoring |
-| Chaos | 📝 Planned | Project Discovery dataset |
-| GitHub | 📝 Planned | Repository scanning |
-| IntelX | 📝 Planned | Intelligence data search |
-| PassiveTotal | 📝 Planned | RiskIQ integration |
-| SecurityTrails | 📝 Planned | Security intelligence |
-| Shodan | 📝 Planned | Device search engine |
-| VirusTotal | 📝 Planned | File/URL analysis |
-
-### AI Services
-
-| Provider | Status | Notes |
-|----------|---------|--------|
-| OpenAI | 📝 Planned | GPT-4 and GPT-3.5 integration |
-| Anthropic | 📝 Planned | Claude models integration |
-| Google AI | 📝 Planned | Gemini models integration |
-| Mistral AI | 📝 Planned | Mistral models integration |
-| Ollama | 📝 Planned | Self-hosted models |
-| Cohere | 📝 Planned | Cohere models integration |
 
 Legend:
 - ✅ Working: Fully implemented and tested
