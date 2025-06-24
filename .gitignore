@@ -233,7 +233,7 @@ templates/*
 
 dist/*
 
-orbit
+bitor
 pb_data/*
 
 .gitlab-ci.yml

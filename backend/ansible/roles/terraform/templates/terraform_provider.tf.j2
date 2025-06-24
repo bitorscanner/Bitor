@@ -1,15 +1,35 @@
 terraform {
   required_version = ">= 0.12.0"
   required_providers {
+    {% if provider.name == "aws" %}
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+    {% else %}
     digitalocean = {
       source = "digitalocean/digitalocean"
+    }
+    {% endif %}
+    tls = {
+      source  = "hashicorp/tls"
+      version = "~> 4.0"
     }
     local = ">= 1.2"
   }
 }
+
+{% if provider.name == "aws" %}
+provider "aws" {
+  region     = var.aws_region
+  access_key = var.aws_access_key
+  secret_key = var.aws_secret_key
+}
+{% else %}
 provider "digitalocean" {
   token = var.do_token
 }
+{% endif %}
 terraform {
   backend "s3" {
     skip_requesting_account_id = true

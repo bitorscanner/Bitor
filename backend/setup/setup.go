@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"orbit/services/notification"
-	"orbit/utils/crypto"
+	"bitor/services/notification"
+	"bitor/utils/crypto"
 	"os"
 	"path/filepath"
 
@@ -313,7 +313,7 @@ func initializePublicSettings(app *pocketbase.PocketBase) error {
 
 		// Set default app name only on first initialization
 		settings := app.Settings()
-		settings.Meta.AppName = "Orbit"
+		settings.Meta.AppName = "Bitor"
 		if err := app.Dao().SaveSettings(settings); err != nil {
 			return fmt.Errorf("failed to set default app name: %v", err)
 		}

@@ -13,9 +13,9 @@
 	import { flip } from 'svelte/animate';
 
 	const path: string = '/dashboard';
-	const description: string = 'Dashboard Orbit';
-	const title: string = 'Dashboard Orbit';
-	const subtitle: string = 'Dashboard Orbit';
+	const description: string = 'Dashboard Bitor';
+	const title: string = 'Dashboard Bitor';
+	const subtitle: string = 'Dashboard Bitor';
 
 	interface DashboardItem {
 		id: string;

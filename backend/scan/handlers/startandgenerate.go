@@ -15,9 +15,9 @@ import (
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
 
-	"orbit/models"
-	"orbit/scan/utils"
-	"orbit/services/notification"
+	"bitor/models"
+	"bitor/scan/utils"
+	"bitor/services/notification"
 )
 
 // updateScanStatus safely updates the scan status by fetching a fresh copy first

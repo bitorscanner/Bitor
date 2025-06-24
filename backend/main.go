@@ -16,18 +16,18 @@ import (
 	"github.com/pocketbase/pocketbase/plugins/migratecmd"
 	"github.com/spf13/cobra"
 
-	"orbit/handlers"
-	_ "orbit/migrations" // ensure migrations are registered
-	"orbit/nuclei"
-	"orbit/routes"
-	"orbit/scan"
-	"orbit/setup"
-	"orbit/ssh"
-	"orbit/templates"
-	"orbit/terminal"
-	"orbit/utils"
-	"orbit/utils/crypto"
-	"orbit/version"
+	"bitor/handlers"
+	_ "bitor/migrations" // ensure migrations are registered
+	"bitor/nuclei"
+	"bitor/routes"
+	"bitor/scan"
+	"bitor/setup"
+	"bitor/ssh"
+	"bitor/templates"
+	"bitor/terminal"
+	"bitor/utils"
+	"bitor/utils/crypto"
+	"bitor/version"
 )
 
 //go:embed all:pb_public

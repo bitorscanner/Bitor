@@ -5,7 +5,7 @@
 
 - name: Update scan logs
   uri:
-    url: "{% raw %}{{ orbit_api_url }}/api/scan/update-logs{% endraw %}"
+    url: "{% raw %}{{ bitor_api_url }}/api/scan/update-logs{% endraw %}"
     method: POST
     headers:
       Content-Type: "application/json"

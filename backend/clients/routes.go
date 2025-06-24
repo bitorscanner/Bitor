@@ -2,7 +2,7 @@ package clients
 
 import (
 	"log"
-	"orbit/clients/handlers"
+	"bitor/clients/handlers"
 
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"

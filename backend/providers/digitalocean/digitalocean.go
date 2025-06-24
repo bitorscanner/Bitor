@@ -3,7 +3,7 @@ package digitalocean
 import (
 	"context"
 	"fmt"
-	"orbit/utils/crypto"
+	"bitor/utils/crypto"
 	"os"
 
 	"github.com/digitalocean/godo"

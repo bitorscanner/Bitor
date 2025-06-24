@@ -15,5 +15,5 @@ nuclei_blocks_to_generate:
     dest: '{{ nuclei_scan_folder_location }}/{{ nuclei_package_folder_name }}/block_stats.yml'
   - src: block_logs.yml.j2
     dest: '{{ nuclei_scan_folder_location }}/{{ nuclei_package_folder_name }}/block_logs.yml'
-  - src: block_orbit_database.yml.j2
-    dest: '{{ nuclei_scan_folder_location }}/{{ nuclei_package_folder_name }}/block_orbit_database.yml'
+  - src: block_bitor_database.yml.j2
+    dest: '{{ nuclei_scan_folder_location }}/{{ nuclei_package_folder_name }}/block_bitor_database.yml'

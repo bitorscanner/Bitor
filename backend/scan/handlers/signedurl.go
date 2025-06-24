@@ -15,8 +15,8 @@ import (
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase"
 
-	"orbit/models"
-	"orbit/utils/crypto"
+	"bitor/models"
+	"bitor/utils/crypto"
 )
 
 // HandleSignedURL generates a signed URL for accessing S3 objects

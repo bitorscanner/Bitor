@@ -5,7 +5,7 @@
 
 - name: Update VM stop time
   uri:
-    url: "{% raw %}{{ orbit_api_url }}{% endraw %}/api/scan/update-vm-times"
+    url: "{% raw %}{{ bitor_api_url }}{% endraw %}/api/scan/update-vm-times"
     method: POST
     headers:
       Content-Type: "application/json"
@@ -21,7 +21,7 @@
 
 - name: Destory Scan
   uri:
-    url: "{% raw %}{{ orbit_api_url }}{% endraw %}/api/scan/destroy"
+    url: "{% raw %}{{ bitor_api_url }}{% endraw %}/api/scan/destroy"
     method: POST
     headers:
       Content-Type: "application/json"

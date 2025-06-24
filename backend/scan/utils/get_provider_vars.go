@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"orbit/models"
+	"bitor/models"
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase"
@@ -66,6 +66,13 @@ func GetProviderVars(app *pocketbase.PocketBase, provider *pbModels.Record) (*mo
 	case "digitalocean":
 		settings.Project = provider.GetString("settings.project")
 		settings.Tags = provider.GetStringSlice("settings.tags")
+	case "aws":
+		settings.AWSRegion = provider.GetString("settings.region")
+		settings.AccountID = provider.GetString("settings.account_id")
+		settings.VPC = provider.GetString("settings.vpc")
+		settings.Subnet = provider.GetString("settings.subnet")
+		settings.InstanceType = provider.GetString("settings.instance_type")
+		settings.AWSTags = provider.GetStringSlice("settings.tags")
 	}
 
 	vars := &models.ProviderVars{

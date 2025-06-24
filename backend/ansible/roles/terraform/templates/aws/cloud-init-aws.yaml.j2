@@ -1,0 +1,59 @@
+#cloud-config
+# Create a user with SSH key and permissions
+users:
+  - name: ansible
+    ssh-authorized-keys:
+      - "{{ lookup('file', 'keys/key.pub') }}"
+    sudo: ['ALL=(ALL) NOPASSWD:ALL']
+    groups: sudo
+    shell: /bin/bash
+
+# Update and upgrade base image
+package_update: true
+package_upgrade: true
+
+# Install necessary packages
+packages:
+  - curl
+  - tar
+  - git
+  - jq
+  - unzip
+  - zip
+  - ansible
+  - rclone
+  - python3-pip
+  - awscli
+
+runcmd:
+  # Install Go
+  - export GO_VERSION=$(curl -s https://go.dev/VERSION?m=text | sed -n '1p')
+  - curl -LO https://go.dev/dl/${GO_VERSION}.linux-amd64.tar.gz
+  - rm -rf /usr/local/go && sudo tar -C /usr/local -xzf ${GO_VERSION}.linux-amd64.tar.gz
+  - sudo ln -sf /usr/local/go/bin/go /usr/bin/go
+  - echo 'export GOROOT=/usr/local/go' >> /etc/profile
+  - echo 'export GOPATH=$HOME/go' >> /etc/profile
+  - echo 'export PATH=$PATH:/usr/local/go/bin:$GOPATH/bin' >> /etc/profile
+  - source /etc/profile
+  - mkdir -p $HOME/go/{bin,src,pkg}
+  - go version
+  - ansible --version
+  - ansible-galaxy collection install community.aws
+  - pip3 install --upgrade pip
+  - pip3 install boto3 botocore
+  # Install specific version of AWS CLI v2 (upgrade from package version)
+  - curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64-2.22.35.zip" -o "awscliv2.zip"
+  - unzip awscliv2.zip
+  - sudo ./aws/install --update
+  - rm -rf aws awscliv2.zip
+  # Install Session Manager plugin for AWS SSM
+  - curl "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb" -o "session-manager-plugin.deb"
+  - sudo dpkg -i session-manager-plugin.deb
+  - rm session-manager-plugin.deb
+  # Configure instance for optimal performance
+  - echo 'net.core.rmem_default = 262144' >> /etc/sysctl.conf
+  - echo 'net.core.rmem_max = 16777216' >> /etc/sysctl.conf
+  - echo 'net.core.wmem_default = 262144' >> /etc/sysctl.conf
+  - echo 'net.core.wmem_max = 16777216' >> /etc/sysctl.conf
+  - sysctl -p
+  - touch /tmp/cloud-init-done 

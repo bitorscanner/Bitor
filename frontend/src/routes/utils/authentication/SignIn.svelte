@@ -2,10 +2,10 @@
 	import { Label, Input, Checkbox, A, Button, Card } from 'flowbite-svelte';
 	export let title = 'Sign in to platform';
 	export let site = {
-		name: 'Orbit',
+		name: 'Bitor',
 		img: '/images/Bitor_Main_Logo.png',
 		link: '/',
-		imgAlt: 'Orbit Logo'
+		imgAlt: 'Bitor Logo'
 	};
 	export let rememberMe = true;
 	export let lostPassword = true;

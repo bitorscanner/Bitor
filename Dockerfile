@@ -3,7 +3,7 @@ FROM golang:1.23-alpine AS builder
 WORKDIR /build
 COPY backend/ .
 RUN go mod tidy && \
-    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o orbit
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bitor
 
 # Base stage with common dependencies
 FROM alpine:3.19 AS base
@@ -78,7 +78,7 @@ ARG VERSION
 ENV BITOR_VERSION=${VERSION:-v1.0.9}
 RUN echo "Downloading version: ${BITOR_VERSION} for ${TARGETARCH}" && \
     wget -O bitor.tar.gz \
-    "https://github.com/orbitscanner/bitor/releases/download/${BITOR_VERSION}/bitor_${BITOR_VERSION#v}_Linux_${TARGETARCH}.tar.gz" && \
+    "https://github.com/bitorscanner/bitor/releases/download/${BITOR_VERSION}/bitor_${BITOR_VERSION#v}_Linux_${TARGETARCH}.tar.gz" && \
     tar xzf bitor.tar.gz && \
     rm bitor.tar.gz && \
     chmod +x bitor

@@ -1,4 +1,4 @@
-const ENCRYPTION_KEY = "orbit_key_encryption";
+const ENCRYPTION_KEY = "bitor_key_encryption";
 
 /**
  * Encrypts sensitive data using AES-GCM

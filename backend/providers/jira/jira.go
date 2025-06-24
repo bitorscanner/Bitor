@@ -2,7 +2,7 @@ package jira
 
 import (
 	"fmt"
-	"orbit/utils/crypto"
+	"bitor/utils/crypto"
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase"

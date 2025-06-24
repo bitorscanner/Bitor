@@ -26,7 +26,7 @@
 
 - name: Update skipped hosts
   uri:
-    url: "{% raw %}{{ orbit_api_url }}{% endraw %}/api/scan/update-skipped-hosts"
+    url: "{% raw %}{{ bitor_api_url }}{% endraw %}/api/scan/update-skipped-hosts"
     method: POST
     headers:
       Content-Type: "application/json"

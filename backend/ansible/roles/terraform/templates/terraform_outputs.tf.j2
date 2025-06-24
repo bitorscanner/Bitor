@@ -2,10 +2,46 @@
 resource "local_file" "Inventory" {
   content = templatefile("inventory.tmpl",
   {
+    {% if provider.name == "aws" %}
+    "vm-dns" = aws_instance.vm.tags.Name,
+    "vm-ip" = aws_eip.vm_eip.public_ip,
+    "vm-id" = aws_instance.vm.id,
+    {% else %}
     "vm-dns" = digitalocean_droplet.vm.name,
     "vm-ip" = digitalocean_droplet.vm.ipv4_address,
     "vm-id" = digitalocean_droplet.vm.id,
+    {% endif %}
   }
   )
   filename = "../inventory/inventory"
 }
+
+{% if provider.name == "aws" %}
+# Output the private key for debugging (optional)
+output "ssh_private_key" {
+  value     = tls_private_key.ssh_key.private_key_pem
+  sensitive = true
+}
+
+output "instance_ip" {
+  value = aws_eip.vm_eip.public_ip
+}
+
+output "instance_id" {
+  value = aws_instance.vm.id
+}
+{% else %}
+# Output the private key for debugging (optional)
+output "ssh_private_key" {
+  value     = tls_private_key.ssh_key.private_key_pem
+  sensitive = true
+}
+
+output "droplet_ip" {
+  value = digitalocean_droplet.vm.ipv4_address
+}
+
+output "droplet_id" {
+  value = digitalocean_droplet.vm.id
+}
+{% endif %}

@@ -22,6 +22,7 @@
         SiJira,
         SiTelegram
     } from '@icons-pack/svelte-simple-icons';
+    import { generateUUID } from '$lib/utils/uuid';
     import { pocketbase } from '@lib/stores/pocketbase';
 
     export let rules: Array<{
@@ -115,7 +116,7 @@
         if (!typeConfig) return;
 
         const newRule = {
-            id: crypto.randomUUID(),
+            id: generateUUID(),
             name: `${typeConfig.label} Rule`,
             type: typeConfig.value,
             severity: [],

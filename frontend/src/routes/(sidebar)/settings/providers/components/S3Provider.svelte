@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { Label, Input, Toggle, Button, Alert } from 'flowbite-svelte';
+    import { Label, Input, Toggle, Button, Alert, Spinner } from 'flowbite-svelte';
+    import { CheckCircleSolid, CloseCircleSolid } from 'flowbite-svelte-icons';
     import { pocketbase } from '@lib/stores/pocketbase';
     import type { Provider, S3Settings } from '../types';
     import S3APIKeyModal from './S3APIKeyModal.svelte';
@@ -11,6 +12,10 @@
     let success = '';
     let showApiKeyModal = false;
     let hasApiKeys = false;
+    let isTestingStateFile = false;
+    let isTestingScanPath = false;
+    let stateFileTestResult = '';
+    let scanPathTestResult = '';
 
     // Ensure settings has the correct type
     if (!provider.settings || provider.provider_type !== 's3') {
@@ -87,6 +92,68 @@
         checkApiKeys();
         success = 'API keys saved successfully';
         error = '';
+    }
+
+    async function testS3Path(pathType: 'statefile' | 'scan') {
+        const isStateFile = pathType === 'statefile';
+        const testPath = isStateFile ? settings.statefile_path : settings.scans_path;
+        
+        if (!testPath) {
+            error = `${isStateFile ? 'State File' : 'Scan'} Path is required for testing`;
+            return;
+        }
+
+        try {
+            if (isStateFile) {
+                isTestingStateFile = true;
+                stateFileTestResult = '';
+            } else {
+                isTestingScanPath = true;
+                scanPathTestResult = '';
+            }
+            
+            error = '';
+            
+            const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+            const response = await fetch(`${baseUrl}/api/providers/s3/test?provider=${provider.id}&path=${encodeURIComponent(testPath)}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${$pocketbase.authStore.token}`
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                if (isStateFile) {
+                    stateFileTestResult = 'success';
+                } else {
+                    scanPathTestResult = 'success';
+                }
+                success = `${isStateFile ? 'State File' : 'Scan'} Path test passed successfully!`;
+            } else {
+                if (isStateFile) {
+                    stateFileTestResult = 'error';
+                } else {
+                    scanPathTestResult = 'error';
+                }
+                error = data.message || `${isStateFile ? 'State File' : 'Scan'} Path test failed`;
+            }
+        } catch (e: any) {
+            console.error('Error testing S3 path:', e);
+            if (isStateFile) {
+                stateFileTestResult = 'error';
+            } else {
+                scanPathTestResult = 'error';
+            }
+            error = e.message || `${isStateFile ? 'State File' : 'Scan'} Path test failed`;
+        } finally {
+            if (isStateFile) {
+                isTestingStateFile = false;
+            } else {
+                isTestingScanPath = false;
+            }
+        }
     }
 
     // Check for API keys on mount and when the modal is closed
@@ -183,13 +250,34 @@
                 <Label for="statefile_path">
                     State File Path <span class="text-red-500">*</span>
                 </Label>
-                <Input
-                    id="statefile_path"
-                    bind:value={settings.statefile_path}
-                    on:blur={saveSettings}
-                    placeholder="Enter state file path"
-                    required
-                />
+                <div class="flex gap-2">
+                    <Input
+                        id="statefile_path"
+                        bind:value={settings.statefile_path}
+                        on:blur={saveSettings}
+                        placeholder="Enter state file path"
+                        required
+                        class="flex-1"
+                    />
+                    <div class="flex items-center gap-2">
+                        <Button 
+                            size="sm" 
+                            color="blue" 
+                            on:click={() => testS3Path('statefile')}
+                            disabled={isTestingStateFile || !settings.statefile_path}
+                        >
+                            {#if isTestingStateFile}
+                                <Spinner size="4" class="mr-2" />
+                            {/if}
+                            Test
+                        </Button>
+                        {#if stateFileTestResult === 'success'}
+                            <CheckCircleSolid class="w-5 h-5 text-green-500" />
+                        {:else if stateFileTestResult === 'error'}
+                            <CloseCircleSolid class="w-5 h-5 text-red-500" />
+                        {/if}
+                    </div>
+                </div>
             </div>
         {/if}
 
@@ -198,13 +286,34 @@
                 <Label for="scans_path">
                     Scans Path <span class="text-red-500">*</span>
                 </Label>
-                <Input
-                    id="scans_path"
-                    bind:value={settings.scans_path}
-                    on:blur={saveSettings}
-                    placeholder="Enter scans path"
-                    required
-                />
+                <div class="flex gap-2">
+                    <Input
+                        id="scans_path"
+                        bind:value={settings.scans_path}
+                        on:blur={saveSettings}
+                        placeholder="Enter scans path"
+                        required
+                        class="flex-1"
+                    />
+                    <div class="flex items-center gap-2">
+                        <Button 
+                            size="sm" 
+                            color="blue" 
+                            on:click={() => testS3Path('scan')}
+                            disabled={isTestingScanPath || !settings.scans_path}
+                        >
+                            {#if isTestingScanPath}
+                                <Spinner size="4" class="mr-2" />
+                            {/if}
+                            Test
+                        </Button>
+                        {#if scanPathTestResult === 'success'}
+                            <CheckCircleSolid class="w-5 h-5 text-green-500" />
+                        {:else if scanPathTestResult === 'error'}
+                            <CloseCircleSolid class="w-5 h-5 text-red-500" />
+                        {/if}
+                    </div>
+                </div>
             </div>
         {/if}
     {/if}

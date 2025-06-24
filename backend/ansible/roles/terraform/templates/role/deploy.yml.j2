@@ -11,4 +11,10 @@
       secret_key: "{% raw %}{{ s3.state.secret_key }}{% endraw %}"
     force_init: true
     variables:
+      {% if provider.name == "aws" %}
+      aws_access_key: "{% raw %}{{ provider.api_key }}{% endraw %}"
+      aws_secret_key: "{% raw %}{{ provider.secret_key }}{% endraw %}"
+      aws_region: "{% raw %}{{ provider.region }}{% endraw %}"
+      {% else %}
       do_token: "{% raw %}{{ vm.provider_key }}{% endraw %}"
+      {% endif %}

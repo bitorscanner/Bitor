@@ -29,7 +29,7 @@
 		<div class="block md:max-w-lg mb-8 relative">
 			<img 
 				src="/images/Bitor_White_Logo.png" 
-				alt="Orbit Logo" 
+				alt="Bitor Logo"
 				class="w-auto h-24 mx-auto mb-4 object-contain animate-pulse drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]" 
 			/>
 			<div class="absolute inset-0 bg-blue-500/10 blur-2xl rounded-full animate-pulse"></div>

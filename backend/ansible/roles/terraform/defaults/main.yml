@@ -3,8 +3,15 @@ scan_folder_location: 'scans/{{ scan_id }}'
 terraform_path: './terraform'
 terraform_project_path: '{{ scan_folder_location }}/terraform'
 terraform_role_path: '{{ scan_folder_location }}/roles/terraform'
+
+# DigitalOcean defaults
 vm_default_do_image: 'ubuntu-22-04-x64'
 vm_default_img_snapshot_name: 'ct-ubuntu22.04'
 vm_default_do_region: 'sfo2'
 vm_default_do_size: 's-2vcpu-4gb'
+
+# AWS defaults
+vm_default_aws_region: 'us-east-1'
+vm_default_aws_instance_type: 't3.medium'
+
 terraform_state_bucket_key: "{{ scan_id }}/terraform.tfstate"

@@ -8,8 +8,8 @@ import (
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
 
-	"orbit/models"
-	"orbit/scan/utils"
+	"bitor/models"
+	"bitor/scan/utils"
 )
 
 // HandleGenerateScan handles the generation of scan code.

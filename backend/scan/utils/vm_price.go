@@ -2,7 +2,7 @@ package utils
 
 import (
 	"fmt"
-	"orbit/providers/digitalocean"
+	"bitor/providers/digitalocean"
 
 	"github.com/pocketbase/pocketbase"
 )

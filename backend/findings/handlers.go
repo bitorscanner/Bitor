@@ -415,10 +415,12 @@ func HandleVulnerabilitiesByClient(app *pocketbase.PocketBase) echo.HandlerFunc 
 			conditions["false_positive"] = falsePositive
 		}
 
-		// Get the current user from the context
+		// Check for admin authentication
+		admin, _ := c.Get(apis.ContextAdminKey).(*models.Admin)
 		user, _ := c.Get(apis.ContextAuthRecordKey).(*models.Record)
-		if user != nil && !user.GetBool("super_admin") {
-			// For non-admin users, always filter by their user ID
+		
+		// For regular users (non-admin), always filter by their user ID
+		if admin == nil && user != nil {
 			conditions["created_by"] = user.Id
 		} else if userFilter != "" {
 			// For admin users, respect the user_id filter if provided
@@ -540,11 +542,14 @@ func HandleRecentFindings(app *pocketbase.PocketBase) echo.HandlerFunc {
 		// Calculate the date 30 days ago
 		thirtyDaysAgo := time.Now().AddDate(0, 0, -30)
 
-		// Get the current user from the context
+		// Check for admin authentication
+		admin, _ := c.Get(apis.ContextAdminKey).(*models.Admin)
 		user, _ := c.Get(apis.ContextAuthRecordKey).(*models.Record)
-		if user == nil {
+		
+		// Require either admin or user authentication
+		if admin == nil && user == nil {
 			return c.JSON(http.StatusUnauthorized, map[string]interface{}{
-				"error": "User not found",
+				"error": "Authentication required",
 			})
 		}
 
@@ -556,7 +561,8 @@ func HandleRecentFindings(app *pocketbase.PocketBase) echo.HandlerFunc {
 		}
 
 		// For non-admin users, add a condition to only show their findings
-		if !user.GetBool("super_admin") {
+		// Admin users (admin != nil) can see all findings
+		if admin == nil && user != nil {
 			conditions = append(conditions, dbx.HashExp{"created_by": user.Id})
 		}
 

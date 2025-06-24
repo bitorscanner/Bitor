@@ -1,7 +1,7 @@
 {# Only include the tag section if vm.tags exists and is not empty #}
 {% if vm is defined and vm.tags is defined and vm.tags and vm.tags.strip() %}
 {% for tag in vm.tags.replace(',', ' ').split() %}
-resource "digitalocean_tag" "orbit_tag_{{ loop.index }}" {
+resource "digitalocean_tag" "bitor_tag_{{ loop.index }}" {
   name = "{{ tag | trim }}"
 }
 {% endfor %}
@@ -13,7 +13,7 @@ resource "tls_private_key" "ssh_key" {
 }
 
 resource "digitalocean_ssh_key" "terraform_ssh_key" {
-  name       = "orbit-terraform-{{ scan_id }}"
+  name       = "bitor-terraform-{{ scan_id }}"
   public_key = tls_private_key.ssh_key.public_key_openssh
 }
 
@@ -23,7 +23,7 @@ resource "digitalocean_droplet" "vm" {
   region = "{{ vm.do_region|default(vm_default_do_region) }}"
   size = "{{ vm.do_size|default(vm_default_do_size) }}"
   {% if vm is defined and vm.tags is defined and vm.tags and vm.tags.strip() %}
-  tags = [{% for tag in vm.tags.replace(',', ' ').split() %}digitalocean_tag.orbit_tag_{{ loop.index }}.id,{% endfor %}]
+  tags = [{% for tag in vm.tags.replace(',', ' ').split() %}digitalocean_tag.bitor_tag_{{ loop.index }}.id,{% endfor %}]
   {% endif %}
   user_data = "${file("cloud-init-do.yaml")}"
   ssh_keys = [

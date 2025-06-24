@@ -8,7 +8,7 @@ import (
 	"github.com/pocketbase/pocketbase"
 	pbModels "github.com/pocketbase/pocketbase/models"
 
-	"orbit/models"
+	"bitor/models"
 )
 
 func HandleScheduleScan(app *pocketbase.PocketBase) echo.HandlerFunc {

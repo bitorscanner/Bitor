@@ -3,7 +3,8 @@ package providers
 import (
 	"fmt"
 	"net/http"
-	"orbit/providers/digitalocean"
+	"bitor/providers/digitalocean"
+	"bitor/providers/s3"
 
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
@@ -63,14 +64,14 @@ func RegisterRoutes(app *pocketbase.PocketBase, router *echo.Group) {
 	fmt.Printf("Starting provider routes registration...\n")
 
 	// Create a group for provider routes with authentication middleware
-	providerGroup := router.Group("/api/providers",
+	providerGroup := router.Group("/providers",
 		apis.LoadAuthContext(app),           // Apply LoadAuthContext middleware first
 		apis.RequireAdminOrRecordAuth(),     // Allow both admin and user authentication
 		checkManageProvidersPermission(app), // Check for manage_providers permission
 		apis.ActivityLogger(app),            // Optional: log activities
 	)
 
-	fmt.Printf("Provider group created with path: /api/providers\n")
+	fmt.Printf("Provider group created with path: /providers\n")
 
 	// DigitalOcean routes
 	providerGroup.GET("/digitalocean/projects", func(c echo.Context) error {
@@ -209,6 +210,58 @@ func RegisterRoutes(app *pocketbase.PocketBase, router *echo.Group) {
 
 		return c.JSON(http.StatusOK, map[string]interface{}{
 			"price_hourly": price,
+		})
+	})
+
+	// S3 routes
+	providerGroup.POST("/s3/test", func(c echo.Context) error {
+		providerID := c.QueryParam("provider")
+		testPath := c.QueryParam("path")
+		
+		if providerID == "" {
+			return c.JSON(http.StatusBadRequest, map[string]string{
+				"error": "provider parameter is required",
+			})
+		}
+		
+		if testPath == "" {
+			return c.JSON(http.StatusBadRequest, map[string]string{
+				"error": "path parameter is required",
+			})
+		}
+
+		err := s3.TestS3Connection(app, providerID, testPath)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{
+				"error": err.Error(),
+			})
+		}
+		
+		return c.JSON(http.StatusOK, map[string]string{
+			"status":  "success",
+			"message": "S3 connection test passed successfully",
+		})
+	})
+
+	providerGroup.GET("/s3/validate", func(c echo.Context) error {
+		providerID := c.QueryParam("provider")
+		
+		if providerID == "" {
+			return c.JSON(http.StatusBadRequest, map[string]string{
+				"error": "provider parameter is required",
+			})
+		}
+
+		err := s3.ValidateCredentials(app, providerID)
+		if err != nil {
+			return c.JSON(http.StatusUnauthorized, map[string]string{
+				"error": err.Error(),
+			})
+		}
+		
+		return c.JSON(http.StatusOK, map[string]string{
+			"status":  "success",
+			"message": "S3 credentials are valid",
 		})
 	})
 

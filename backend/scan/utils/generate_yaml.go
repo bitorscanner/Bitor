@@ -9,7 +9,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"orbit/utils/crypto"
+	"bitor/utils/crypto"
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase"
@@ -562,24 +562,64 @@ s3:
 			case "aws":
 				region := ""
 				accountID := ""
+				var tagString string
 				if settingsMap != nil {
 					region, _ = settingsMap["region"].(string)
 					accountID, _ = settingsMap["account_id"].(string)
+					
+					// Handle tags properly
+					if tagsRaw, ok := settingsMap["tags"]; ok {
+						switch v := tagsRaw.(type) {
+						case string:
+							if v != "" {
+								tagString = v
+							}
+						case []interface{}:
+							var validTags []string
+							for _, tag := range v {
+								if str, ok := tag.(string); ok && str != "" {
+									validTags = append(validTags, str)
+								}
+							}
+							if len(validTags) > 0 {
+								tagString = strings.Join(validTags, ",")
+							}
+						}
+					}
 				}
-				yamlContent += fmt.Sprintf(`
+
+				// Get the VM size from the scan profile
+				vmSize := scanProfileRecord.GetString("vm_size")
+				if vmSize == "" {
+					return "", fmt.Errorf("vm_size not found in scan profile")
+				}
+
+				vmConfig := fmt.Sprintf(`
 
 vm:
   provider_service: "AWS"
   account_id: "%s"
+  aws_instance_type: "%s"`,
+					accountID,
+					vmSize)
+
+				// Add tags only if they exist
+				if tagString != "" {
+					vmConfig = strings.Replace(vmConfig, `aws_instance_type:`, fmt.Sprintf(`tags: "%s"
+  aws_instance_type:`, tagString), 1)
+				}
+
+				providerConfig := fmt.Sprintf(`
 provider:
   name: "aws"
   region: "%s"
   api_key: "%s"
   secret_key: "%s"`,
-					accountID,
 					region,
 					keys["access_key"],
 					keys["secret_key"])
+
+				yamlContent += vmConfig + providerConfig
 
 			case "digitalocean":
 				region := ""

@@ -72,7 +72,7 @@ changelog:
 
 release:
   github:
-    owner: orbitscanner
+    owner: bitorscanner
     name: bitor
   draft: false
   prerelease: auto

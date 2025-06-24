@@ -2,7 +2,7 @@ package findings
 
 import (
 	// Adjust the import path as necessary
-	"orbit/services"
+	"bitor/services"
 
 	"net/http"
 

@@ -1,5 +1,6 @@
 ---
 - include_tasks: folders.yml
 - include_tasks: digitalocean.yml
+- include_tasks: aws.yml
 - include_tasks: generate.yml
 - include_tasks: role.yml

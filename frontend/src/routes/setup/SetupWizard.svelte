@@ -142,16 +142,16 @@
             <!-- Light mode logo -->
             <img
               src="/images/Bitor_Main_Logo.png"
-              alt="Orbit Logo"
+              alt="Bitor Logo"
               class="mx-auto block dark:hidden"
             />
             <!-- Dark mode logo -->
             <img
               src="/images/Bitor_White_Logo.png"
-              alt="Orbit Logo"
+              alt="Bitor Logo"
               class="mx-auto hidden dark:block"
             />
-            <h2 class="text-2xl font-semibold mt-4 text-gray-900 dark:text-white">Welcome to Orbit!</h2>
+            <h2 class="text-2xl font-semibold mt-4 text-gray-900 dark:text-white">Welcome to Bitor!</h2>
             <p class="mt-2 text-gray-600 dark:text-gray-300">
               Let's get started by setting up your admin account.
             </p>
@@ -233,13 +233,13 @@
             <!-- Light mode logo -->
             <img
               src="/images/Bitor_Main_Logo.png"
-              alt="Orbit Logo"
+              alt="Bitor Logo"
               class="mx-auto block dark:hidden"
             />
             <!-- Dark mode logo -->
             <img
               src="/images/Bitor_White_Logo.png"
-              alt="Orbit Logo"
+              alt="Bitor Logo"
               class="mx-auto hidden dark:block"
             />
             <h2 class="text-2xl font-semibold mt-4 text-gray-900 dark:text-white">Setup Complete!</h2>
@@ -250,7 +250,7 @@
               </Toast>
             {/if}
             <p class="mt-2 text-gray-600 dark:text-gray-300">
-              Your admin account has been created. You can now start using Orbit.
+              Your admin account has been created. You can now start using Bitor.
             </p>
             <Button
               on:click={() => goto('/')}

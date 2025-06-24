@@ -6,8 +6,8 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"orbit/services"
-	"orbit/services/notification"
+	"bitor/services"
+	"bitor/services/notification"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -19,7 +19,7 @@ import (
 	"github.com/pocketbase/pocketbase/apis"
 	pbModels "github.com/pocketbase/pocketbase/models"
 
-	orbitModels "orbit/models"
+	bitorModels "bitor/models"
 )
 
 // chunkInfo stores information about uploaded chunks
@@ -92,7 +92,7 @@ func HandleImportNucleiScanResults(app *pocketbase.PocketBase) echo.HandlerFunc 
 		}
 
 		// Create temporary directory if it doesn't exist
-		tempDir := filepath.Join(os.TempDir(), "orbit_uploads")
+		tempDir := filepath.Join(os.TempDir(), "bitor_uploads")
 		if err := os.MkdirAll(tempDir, 0755); err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{
 				"error": "Failed to create temp directory",
@@ -260,17 +260,17 @@ func processFile(app *pocketbase.PocketBase, filePath string, scanID string, cli
 	logger.Printf("[DEBUG] JSON file path: %s", filePath)
 
 	// First try to parse as array
-	var findings []orbitModels.NucleiFinding
+	var findings []bitorModels.NucleiFinding
 	if err := json.Unmarshal(jsonData, &findings); err != nil {
 		logger.Printf("[ERROR] Failed to parse JSON as array: %v", err)
 
 		// Try to parse as single finding
-		var singleFinding orbitModels.NucleiFinding
+		var singleFinding bitorModels.NucleiFinding
 		if err := json.Unmarshal(jsonData, &singleFinding); err != nil {
 			logger.Printf("[ERROR] Failed to parse JSON as single finding: %v", err)
 			return
 		}
-		findings = []orbitModels.NucleiFinding{singleFinding}
+		findings = []bitorModels.NucleiFinding{singleFinding}
 	}
 
 	// Log the actual number of findings
@@ -337,13 +337,13 @@ func getSeverityOrder(severity string) int {
 }
 
 // Process findings in parallel
-func processFindings(app *pocketbase.PocketBase, findings []orbitModels.NucleiFinding, clientID string, scanID string, logger *log.Logger, userID string) {
+func processFindings(app *pocketbase.PocketBase, findings []bitorModels.NucleiFinding, clientID string, scanID string, logger *log.Logger, userID string) {
 	logger.Printf("[DEBUG] Starting processFindings for scan %s with %d total findings", scanID, len(findings))
 	logger.Printf("[DEBUG] Using userID %s for created_by field", userID)
 
 	// Map to track unique findings
 	findingsMap := make(map[string]struct {
-		finding      *orbitModels.Finding
+		finding      *bitorModels.Finding
 		originalData string
 	})
 
@@ -352,7 +352,7 @@ func processFindings(app *pocketbase.PocketBase, findings []orbitModels.NucleiFi
 
 	// First pass: identify unique findings and check for hash collisions
 	for _, finding := range findings {
-		newFinding, err := orbitModels.NewFindingFromNuclei(finding, clientID, scanID, userID)
+		newFinding, err := bitorModels.NewFindingFromNuclei(finding, clientID, scanID, userID)
 		if err != nil {
 			logger.Printf("[ERROR] Error creating finding: %v", err)
 			continue
@@ -396,7 +396,7 @@ func processFindings(app *pocketbase.PocketBase, findings []orbitModels.NucleiFi
 			}
 		} else {
 			findingsMap[hash] = struct {
-				finding      *orbitModels.Finding
+				finding      *bitorModels.Finding
 				originalData string
 			}{
 				finding:      newFinding,

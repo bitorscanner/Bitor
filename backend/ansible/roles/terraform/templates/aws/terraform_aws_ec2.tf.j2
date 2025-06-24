@@ -1,0 +1,153 @@
+{# Only include the tag section if vm.tags exists and is not empty #}
+{% if vm is defined and vm.tags is defined and vm.tags and vm.tags.strip() %}
+{% set tag_list = vm.tags.replace(',', ' ').split() %}
+{% endif %}
+
+# Get default VPC
+data "aws_vpc" "default" {
+  default = true
+}
+
+# Get default subnet in the specified AZ
+data "aws_subnet" "default" {
+  vpc_id            = data.aws_vpc.default.id
+  availability_zone = "{{ provider.region }}a"
+  default_for_az    = true
+}
+
+# Get the latest Ubuntu 22.04 LTS AMI
+data "aws_ami" "ubuntu" {
+  most_recent = true
+  owners      = ["099720109477"] # Canonical
+
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
+
+# Generate SSH key pair
+resource "tls_private_key" "ssh_key" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+
+# Create AWS key pair
+resource "aws_key_pair" "terraform_ssh_key" {
+  key_name   = "bitor-terraform-{{ scan_id }}"
+  public_key = tls_private_key.ssh_key.public_key_openssh
+
+  tags = {
+    Name = "bitor-terraform-{{ scan_id }}"
+    ManagedBy = "Bitor"
+    ScanID = "{{ scan_id }}"
+    {% if vm is defined and vm.tags is defined and vm.tags and vm.tags.strip() %}
+    {% for tag in tag_list %}
+    "{{ tag | trim }}" = "true"
+    {% endfor %}
+    {% endif %}
+  }
+}
+
+# Security group for the instance
+resource "aws_security_group" "bitor_sg" {
+  name_prefix = "bitor-{{ scan_id }}-"
+  description = "Security group for Bitor scan {{ scan_id }}"
+  vpc_id      = data.aws_vpc.default.id
+
+  # SSH access
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "SSH access"
+  }
+
+  # All outbound traffic
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "All outbound traffic"
+  }
+
+  tags = {
+    Name = "bitor-sg-{{ scan_id }}"
+    ManagedBy = "Bitor"
+    ScanID = "{{ scan_id }}"
+    {% if vm is defined and vm.tags is defined and vm.tags and vm.tags.strip() %}
+    {% for tag in tag_list %}
+    "{{ tag | trim }}" = "true"
+    {% endfor %}
+    {% endif %}
+  }
+}
+
+# EC2 instance
+resource "aws_instance" "vm" {
+  ami                     = data.aws_ami.ubuntu.id
+  instance_type          = "{{ vm.aws_instance_type|default(vm_default_aws_instance_type) }}"
+  availability_zone       = "{{ provider.region }}a"
+  subnet_id              = data.aws_subnet.default.id
+  key_name               = aws_key_pair.terraform_ssh_key.key_name
+  vpc_security_group_ids = [aws_security_group.bitor_sg.id]
+  
+  user_data = base64encode(file("cloud-init-aws.yaml"))
+
+  # Enable detailed monitoring
+  monitoring = true
+
+  # Root volume configuration
+  root_block_device {
+    volume_type           = "gp3"
+    volume_size           = 20
+    delete_on_termination = true
+    encrypted             = true
+
+    tags = {
+      Name = "bitor-root-{{ scan_id }}"
+      ManagedBy = "Bitor"
+      ScanID = "{{ scan_id }}"
+    }
+  }
+
+  tags = {
+    Name = "vm-{{ scan_id }}"
+    ManagedBy = "Bitor"
+    ScanID = "{{ scan_id }}"
+    {% if vm is defined and vm.tags is defined and vm.tags and vm.tags.strip() %}
+    {% for tag in tag_list %}
+    "{{ tag | trim }}" = "true"
+    {% endfor %}
+    {% endif %}
+  }
+
+  # Ensure the instance is fully ready before proceeding
+  user_data_replace_on_change = true
+}
+
+# Elastic IP (optional, for consistent external IP)
+resource "aws_eip" "vm_eip" {
+  instance = aws_instance.vm.id
+  domain   = "vpc"
+
+  tags = {
+    Name = "bitor-eip-{{ scan_id }}"
+    ManagedBy = "Bitor"
+    ScanID = "{{ scan_id }}"
+    {% if vm is defined and vm.tags is defined and vm.tags and vm.tags.strip() %}
+    {% for tag in tag_list %}
+    "{{ tag | trim }}" = "true"
+    {% endfor %}
+    {% endif %}
+  }
+
+  depends_on = [aws_instance.vm]
+} 

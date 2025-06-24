@@ -213,8 +213,8 @@ func SendTestEmail(app *pocketbase.PocketBase, to string) error {
 			Address: app.Settings().Meta.SenderAddress,
 		},
 		To:      []mail.Address{{Address: to}},
-		Subject: "Orbit Email Test",
-		HTML:    "This is a test email from your Orbit installation.",
+		Subject: "Bitor Email Test",
+		HTML:    "This is a test email from your bitor installation.",
 	}
 
 	log.Printf("Sending test email to %s from %s", to, app.Settings().Meta.SenderAddress)

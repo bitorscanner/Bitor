@@ -9,7 +9,7 @@ import (
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/models"
-	"orbit/services/notification"
+	"bitor/services/notification"
 )
 
 type ScanHandler struct {

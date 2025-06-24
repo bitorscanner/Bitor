@@ -14,8 +14,8 @@ import (
 
 	pbModels "github.com/pocketbase/pocketbase/models"
 
-	"orbit/models"
-	"orbit/scan/utils"
+	"bitor/models"
+	"bitor/scan/utils"
 )
 
 type ScanScheduler struct {

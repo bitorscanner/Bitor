@@ -1,5 +1,25 @@
+{% if provider.name == "aws" %}
+variable "aws_access_key" {
+  description = "AWS Access Key"
+  type        = string
+  sensitive   = true
+}
+
+variable "aws_secret_key" {
+  description = "AWS Secret Key"
+  type        = string
+  sensitive   = true
+}
+
+variable "aws_region" {
+  description = "AWS Region"
+  type        = string
+  default     = "us-east-1"
+}
+{% else %}
 variable "do_token" {
   description = "Digital Ocean API Key"
   type        = string
   sensitive   = true
 }
+{% endif %}

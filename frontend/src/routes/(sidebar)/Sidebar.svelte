@@ -163,7 +163,7 @@
 	let links = [
 		{
 			label: 'GitHub Repository',
-			href: 'https://github.com/orbitscanner/orbit',
+			href: 'https://github.com/bitorscanner/bitor',
 				icon: GithubSolid
 		},
 		{

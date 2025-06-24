@@ -2,9 +2,9 @@ package scan
 
 import (
 	"log"
-	"orbit/auth"
-	"orbit/scan/handlers"
-	"orbit/services/notification"
+	"bitor/auth"
+	"bitor/scan/handlers"
+	"bitor/services/notification"
 
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"

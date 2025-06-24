@@ -1,9 +1,9 @@
-data "digitalocean_project" "orbit" {
+data "digitalocean_project" "bitor" {
   name = "{{ vm.do_project }}"
 }
 
 resource "digitalocean_project_resources" "{{ vm.do_project }}" {
-  project = data.digitalocean_project.orbit.id
+  project = data.digitalocean_project.bitor.id
   resources = [
     digitalocean_droplet.vm.urn
   ]

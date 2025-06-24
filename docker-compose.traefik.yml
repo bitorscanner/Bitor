@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   bitor:
-    image: ghcr.io/orbitscanner/bitor:latest
+    image: ghcr.io/bitorscanner/bitor:latest
     restart: unless-stopped
     environment:
       - API_ENCRYPTION_KEY=${API_ENCRYPTION_KEY:?API encryption key is required}
@@ -17,7 +17,7 @@ services:
       - "traefik.http.routers.bitor.tls.certresolver=letsencrypt"
       - "traefik.http.services.bitor.loadbalancer.server.port=8090"
     networks:
-      - orbit-net
+      - bitor-net
 
   traefik:
     image: traefik:v2.10
@@ -30,10 +30,10 @@ services:
       - ./traefik/acme.json:/acme.json
       - ./traefik/traefik.yml:/traefik.yml:ro
     networks:
-      - orbit-net
+      - bitor-net
     depends_on:
       - bitor
 
 networks:
-  orbit-net:
+  bitor-net:
     driver: bridge 

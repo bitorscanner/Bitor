@@ -10,7 +10,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/models"
 
-	"orbit/services"
+	"bitor/services"
 )
 
 // RegisterFindingsRoutes registers all findings-related routes

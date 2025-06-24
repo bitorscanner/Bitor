@@ -3,6 +3,7 @@
   import { Button, Input, Select, MultiSelect, Badge, Dropdown, DropdownItem } from 'flowbite-svelte';
   import { createEventDispatcher } from 'svelte';
   import { CloseOutline, FilterSolid, SearchOutline } from 'flowbite-svelte-icons';
+  import { generateUUID } from '$lib/utils/uuid';
   import { 
     fieldOptions, 
     operatorOptions, 
@@ -75,7 +76,7 @@
       field: '',
       operator: 'equals',
       value: '',
-      id: crypto.randomUUID()
+      id: generateUUID()
     };
   }
 

@@ -10,8 +10,8 @@ import (
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
 
-	"orbit/models"
-	"orbit/scan/utils"
+	"bitor/models"
+	"bitor/scan/utils"
 )
 
 // HandleDestroyScan handles the destruction of a scan.

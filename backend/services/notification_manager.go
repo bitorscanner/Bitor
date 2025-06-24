@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"html/template"
 	"log"
-	"orbit/services/notification"
+	"bitor/services/notification"
 	"time"
 
 	"github.com/pocketbase/pocketbase"

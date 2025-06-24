@@ -6,14 +6,14 @@
 
 > ⚠️ **Note**: This software is currently in beta and under heavy development. Features and APIs may change frequently.
 
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/orbitscanner/bitor)](https://github.com/orbitscanner/bitor/releases)
-[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/orbitscanner/bitor/release.yml?branch=main)](https://github.com/orbitscanner/bitor/actions)
-[![GitHub stars](https://img.shields.io/github/stars/orbitscanner/bitor)](https://github.com/orbitscanner/bitor/stargazers)
-[![GitHub license](https://img.shields.io/github/license/orbitscanner/bitor)](https://github.com/orbitscanner/bitor/blob/main/LICENSE)
-[![GitHub issues](https://img.shields.io/github/issues/orbitscanner/bitor)](https://github.com/orbitscanner/bitor/issues)
-[![Go Report Card](https://goreportcard.com/badge/github.com/orbitscanner/bitor/backend)](https://goreportcard.com/report/github.com/orbitscanner/bitor/backend)
-[![codecov](https://codecov.io/gh/orbitscanner/bitor/branch/main/graph/badge.svg)](https://codecov.io/gh/orbitscanner/bitor)
-[![Docker Image](https://img.shields.io/badge/container-ghcr.io-blue?logo=github)](https://github.com/orbitscanner/bitor/pkgs/container/bitor)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/bitorscanner/bitor)](https://github.com/bitorscanner/bitor/releases)
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/bitorscanner/bitor/release.yml?branch=main)](https://github.com/bitorscanner/bitor/actions)
+[![GitHub stars](https://img.shields.io/github/stars/bitorscanner/bitor)](https://github.com/bitorscanner/bitor/stargazers)
+[![GitHub license](https://img.shields.io/github/license/bitorscanner/bitor)](https://github.com/bitorscanner/bitor/blob/main/LICENSE)
+[![GitHub issues](https://img.shields.io/github/issues/bitorscanner/bitor)](https://github.com/bitorscanner/bitor/issues)
+[![Go Report Card](https://goreportcard.com/badge/github.com/bitorscanner/bitor/backend)](https://goreportcard.com/report/github.com/bitorscanner/bitor/backend)
+[![codecov](https://codecov.io/gh/bitorscanner/bitor/branch/main/graph/badge.svg)](https://codecov.io/gh/bitorscanner/bitor)
+[![Docker Image](https://img.shields.io/badge/container-ghcr.io-blue?logo=github)](https://github.com/bitorscanner/bitor/pkgs/container/bitor)
 
 Bitor (formerly Orbit) is a powerful platform designed to facilitate large-scale Nuclei scans, enabling teams to efficiently manage and analyze scan results. By integrating modern technologies with a web frontend in SvelteKit and a backend in Go, with Terraform and Ansible for infrastructure and automation, Bitor streamlines the process of running security scans and collaborating on findings.
 
@@ -46,9 +46,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Support
 
 - Documentation: [bitor.dev](https://bitor.dev)
-- Issues: [GitHub Issues](https://github.com/orbitscanner/bitor/issues)
-- Discussions: [GitHub Discussions](https://github.com/orbitscanner/bitor/discussions)
-- Feature Requests: Please submit feature requests through [GitHub Issues](https://github.com/orbitscanner/bitor/issues/new?labels=enhancement&template=feature_request.md)
+- Issues: [GitHub Issues](https://github.com/bitorscanner/bitor/issues)
+- Discussions: [GitHub Discussions](https://github.com/bitorscanner/bitor/discussions)
+- Feature Requests: Please submit feature requests through [GitHub Issues](https://github.com/bitorscanner/bitor/issues/new?labels=enhancement&template=feature_request.md)
 
 👀 Don't forget to "Watch" the repository to stay updated with the latest developments!
 

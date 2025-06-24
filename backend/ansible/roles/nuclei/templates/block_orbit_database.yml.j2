@@ -11,7 +11,7 @@
     -F "scan_id={% raw %}{{ scan_id }}{% endraw %}"
     -F "client_id={% raw %}{{ client_id }}{% endraw %}"
     -F "file=@{% raw %}{{ nuclei_output_json }}{% endraw %}"
-    "{% raw %}{{ orbit_api_url }}{% endraw %}/api/scan/import-scan-results"
+    "{% raw %}{{ bitor_api_url }}{% endraw %}/api/scan/import-scan-results"
   when: results_file.stat.exists
   register: import_result
   ignore_errors: yes

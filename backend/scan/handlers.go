@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"orbit/models"
-	"orbit/services"
-	"orbit/services/notification"
+	"bitor/models"
+	"bitor/services"
+	"bitor/services/notification"
 	"time"
 
 	"github.com/labstack/echo/v5"

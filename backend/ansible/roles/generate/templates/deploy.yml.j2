@@ -67,7 +67,7 @@
         delay: 10
         timeout: 300
 
-- hosts: orbit
+- hosts: bitor
   gather_facts: no
   vars:
     ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o IdentitiesOnly=yes'
@@ -108,7 +108,7 @@
       
 - name: SSH & A
   gather_facts: yes
-  hosts: orbit
+  hosts: bitor
   connection: ssh
   become: true
 {% if debug | default(false) %}
@@ -132,7 +132,7 @@
       retries: 10
 
 - name: Setup Reverse SSH Tunnel
-  hosts: orbit
+  hosts: bitor
   gather_facts: no
   tasks:
     - name: Establish reverse SSH tunnel
@@ -141,7 +141,7 @@
 
 - name: Upload Payload
   gather_facts: True
-  hosts: orbit
+  hosts: bitor
   connection: ssh
   become: true
 {% if debug | default(false) %}

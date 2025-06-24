@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"orbit/providers/jira"
+	"bitor/providers/jira"
 
 	"github.com/nikoksr/notify"
 	"github.com/nikoksr/notify/service/discord"

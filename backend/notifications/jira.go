@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"orbit/providers/jira"
-	"orbit/services"
-	"orbit/types"
+	"bitor/providers/jira"
+	"bitor/services"
+	"bitor/types"
 
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"

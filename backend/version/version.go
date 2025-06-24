@@ -105,7 +105,7 @@ func handleUpdate(c echo.Context) error {
 }
 
 func getLatestRelease() (*GithubRelease, error) {
-	resp, err := http.Get("https://api.github.com/repos/orbitscanner/orbit/releases/latest")
+	resp, err := http.Get("https://api.github.com/repos/bitorscanner/bitor/releases/latest")
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +146,7 @@ func performUpdate(downloadURL string) error {
 	defer resp.Body.Close()
 
 	// Create temporary file
-	tmpFile, err := os.CreateTemp("", "orbit-update-*")
+	tmpFile, err := os.CreateTemp("", "bitor-update-*")
 	if err != nil {
 		return fmt.Errorf("failed to create temporary file: %v", err)
 	}

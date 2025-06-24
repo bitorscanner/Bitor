@@ -1,4 +1,4 @@
-module orbit
+module bitor
 
 go 1.22.7
 

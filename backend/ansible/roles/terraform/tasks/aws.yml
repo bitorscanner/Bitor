@@ -1,0 +1,12 @@
+---
+- name: Generating Terraform AWS EC2
+  template:
+    src: templates/aws/terraform_aws_ec2.tf.j2
+    dest: "{{ terraform_project_path }}/aws_ec2.tf"
+  when: vm.provider_service == 'AWS'
+
+- name: Generating Terraform CloudInit for AWS
+  template:
+    src: templates/aws/cloud-init-aws.yaml.j2
+    dest: "{{ terraform_project_path }}/cloud-init-aws.yaml"
+  when: vm.provider_service == 'AWS' 

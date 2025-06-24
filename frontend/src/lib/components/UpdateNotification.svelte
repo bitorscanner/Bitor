@@ -32,7 +32,7 @@
     </svelte:fragment>
     <span class="font-medium">Update Available!</span>
     <p>
-      A new version of Orbit ({latestVersion}) is available. You are currently running version {currentVersion}.
+      A new version of Bitor ({latestVersion}) is available. You are currently running version {currentVersion}.
       Please check the documentation for update instructions.
     </p>
   </Alert>

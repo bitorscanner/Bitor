@@ -1,7 +1,7 @@
 package services
 
 // ScanStartedTemplate is the template for scan started notifications
-const ScanStartedTemplate = `A new scan has been initiated in Orbit.
+const ScanStartedTemplate = `A new scan has been initiated in Bitor.
 
 Scan Details:
 - Scan ID: {{.scan_id}}

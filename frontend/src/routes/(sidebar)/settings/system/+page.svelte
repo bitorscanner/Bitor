@@ -46,7 +46,7 @@
     smtp_username: '',
     smtp_password: '',
     smtp_encryption: 'tls',
-    app_name: 'Orbit',
+    app_name: 'Bitor',
     app_url: ''
   };
 
@@ -101,7 +101,7 @@
               smtp_username: mailSettings.smtp?.username || '',
               smtp_password: '', // Don't load the password for security
               smtp_encryption: mailSettings.smtp?.tls ? 'tls' : 'none',
-              app_name: mailSettings.meta?.appName || 'Orbit',
+              app_name: mailSettings.meta?.appName || 'Bitor',
               app_url: mailSettings.meta?.appUrl || ''
             };
           }
@@ -429,7 +429,7 @@
                 type="text"
                 bind:value={settings.sender_name}
                 class="w-full"
-                placeholder="Orbit Security"
+                placeholder="Bitor Security"
               />
             </div>
 
@@ -516,7 +516,7 @@
                 type="text"
                 bind:value={settings.app_name}
                 class="w-full"
-                placeholder="Orbit"
+                placeholder="Bitor"
               />
               <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
                 The name of your application (appears in emails and UI)
@@ -530,7 +530,7 @@
                 type="url"
                 bind:value={settings.app_url}
                 class="w-full"
-                placeholder="https://your-orbit-instance.com"
+                placeholder="https://your-bitor-instance.com"
               />
               <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
                 The base URL of your application (used for email links)

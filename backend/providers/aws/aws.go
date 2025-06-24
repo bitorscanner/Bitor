@@ -3,8 +3,9 @@ package aws
 import (
 	"context"
 	"fmt"
-	"orbit/utils/crypto"
+	"bitor/utils/crypto"
 	"sort"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -291,69 +292,138 @@ func FetchInstanceTypes(app *pocketbase.PocketBase, providerID string, region st
 
 	fmt.Printf("Found %d instance types\n", len(result.InstanceTypes))
 
-	// Define the instance families and sizes we want to include
-	wantedTypes := map[string]bool{
-		// t2 family - burstable, good for development
-		"t2.micro":  true,
-		"t2.small":  true,
-		"t2.medium": true,
-		"t2.large":  true,
-
-		// t3 family - newer generation burstable
-		"t3.micro":  true,
-		"t3.small":  true,
-		"t3.medium": true,
-		"t3.large":  true,
-
-		// m5/m6 family - general purpose
-		"m5.large":   true,
-		"m5.xlarge":  true,
-		"m6a.large":  true,
-		"m6a.xlarge": true,
-
-		// c5/c6 family - compute optimized
-		"c5.large":   true,
-		"c5.xlarge":  true,
-		"c6a.large":  true,
-		"c6a.xlarge": true,
-
-		// r5/r6 family - memory optimized
-		"r5.large":   true,
-		"r5.xlarge":  true,
-		"r6a.large":  true,
-		"r6a.xlarge": true,
+	// Define the instance families we want to include (more comprehensive)
+	wantedFamilies := map[string]bool{
+		// Burstable instances
+		"t2": true,
+		"t3": true,
+		"t3a": true,
+		"t4g": true,
+		
+		// General purpose
+		"m5": true,
+		"m5a": true,
+		"m5n": true,
+		"m6a": true,
+		"m6i": true,
+		"m6in": true,
+		"m7a": true,
+		"m7i": true,
+		
+		// Compute optimized
+		"c5": true,
+		"c5a": true,
+		"c5n": true,
+		"c6a": true,
+		"c6i": true,
+		"c6in": true,
+		"c7a": true,
+		"c7i": true,
+		
+		// Memory optimized
+		"r5": true,
+		"r5a": true,
+		"r5b": true,
+		"r5n": true,
+		"r6a": true,
+		"r6i": true,
+		"r6in": true,
+		"r7a": true,
+		"r7i": true,
+		
+		// Storage optimized
+		"i3": true,
+		"i3en": true,
+		"i4i": true,
+		"d3": true,
+		"d3en": true,
+	}
+	
+	// Define the instance sizes we want to include
+	wantedSizes := map[string]bool{
+		"nano":    true,
+		"micro":   true,
+		"small":   true,
+		"medium":  true,
+		"large":   true,
+		"xlarge":  true,
+		"2xlarge": true,
+		"4xlarge": true,
 	}
 
-	// Approximate hourly prices (US East prices as reference)
-	prices := map[string]float64{
-		"t2.micro":   0.0116,
-		"t2.small":   0.023,
-		"t2.medium":  0.0464,
-		"t2.large":   0.0928,
-		"t3.micro":   0.0104,
-		"t3.small":   0.0208,
-		"t3.medium":  0.0416,
-		"t3.large":   0.0832,
-		"m5.large":   0.096,
-		"m5.xlarge":  0.192,
-		"m6a.large":  0.0864,
-		"m6a.xlarge": 0.1728,
-		"c5.large":   0.085,
-		"c5.xlarge":  0.17,
-		"c6a.large":  0.0765,
-		"c6a.xlarge": 0.153,
-		"r5.large":   0.126,
-		"r5.xlarge":  0.252,
-		"r6a.large":  0.1134,
-		"r6a.xlarge": 0.2268,
+	// Approximate hourly prices based on family and size (US East prices as reference)
+	basePrices := map[string]float64{
+		// Burstable instances (t2/t3/t3a)
+		"t2":  0.0116,
+		"t3":  0.0104,
+		"t3a": 0.0094,
+		"t4g": 0.0084,
+		
+		// General purpose
+		"m5":   0.096,
+		"m5a":  0.086,
+		"m5n":  0.119,
+		"m6a":  0.0864,
+		"m6i":  0.096,
+		"m6in": 0.119,
+		"m7a":  0.081,
+		"m7i":  0.096,
+		
+		// Compute optimized
+		"c5":   0.085,
+		"c5a":  0.077,
+		"c5n":  0.108,
+		"c6a":  0.0765,
+		"c6i":  0.085,
+		"c6in": 0.108,
+		"c7a":  0.072,
+		"c7i":  0.085,
+		
+		// Memory optimized
+		"r5":   0.126,
+		"r5a":  0.113,
+		"r5b":  0.133,
+		"r5n":  0.149,
+		"r6a":  0.1134,
+		"r6i":  0.126,
+		"r6in": 0.149,
+		"r7a":  0.101,
+		"r7i":  0.126,
+		
+		// Storage optimized
+		"i3":   0.156,
+		"i3en": 0.226,
+		"i4i":  0.182,
+		"d3":   0.166,
+		"d3en": 0.251,
+	}
+
+	// Size multipliers (large is base 1.0)
+	sizeMultipliers := map[string]float64{
+		"nano":    0.0025,
+		"micro":   0.12,
+		"small":   0.25,
+		"medium":  0.5,
+		"large":   1.0,
+		"xlarge":  2.0,
+		"2xlarge": 4.0,
+		"4xlarge": 8.0,
 	}
 
 	instanceTypes := make([]map[string]interface{}, 0)
 	for _, instanceType := range result.InstanceTypes {
 		typeName := string(instanceType.InstanceType)
 
-		// Skip if not in our wanted types
-		if !wantedTypes[typeName] {
+		// Parse family and size from type name (e.g., "m5.large" -> family="m5", size="large")
+		parts := strings.Split(typeName, ".")
+		if len(parts) != 2 {
+			continue
+		}
+		family := parts[0]
+		size := parts[1]
+
+		// Skip if family or size not in our wanted lists
+		if !wantedFamilies[family] || !wantedSizes[size] {
 			continue
 		}
 
@@ -367,7 +437,16 @@ func FetchInstanceTypes(app *pocketbase.PocketBase, providerID string, region st
 			memory = fmt.Sprintf("%.1f GiB", float64(*instanceType.MemoryInfo.SizeInMiB)/1024)
 		}
 
-		price := prices[typeName]
+		// Calculate price based on family and size
+		basePrice := basePrices[family]
+		sizeMultiplier := sizeMultipliers[size]
+		price := basePrice * sizeMultiplier
+		
+		// If we don't have pricing data, use a default calculation
+		if basePrice == 0 || sizeMultiplier == 0 {
+			price = 0.05 // Default fallback price
+		}
+		
 		description := fmt.Sprintf("%s, %s - $%.3f/hour", vcpus, memory, price)
 
 		instanceTypes = append(instanceTypes, map[string]interface{}{

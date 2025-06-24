@@ -23,7 +23,7 @@
 
 - name: Update nuclei start time
   uri:
-    url: "{% raw %}{{ orbit_api_url }}{% endraw %}/api/scan/update-nuclei-times"
+    url: "{% raw %}{{ bitor_api_url }}{% endraw %}/api/scan/update-nuclei-times"
     method: POST
     headers:
       Content-Type: "application/json"
@@ -58,7 +58,7 @@
 
 - name: Update nuclei stop time
   uri:
-    url: "{% raw %}{{ orbit_api_url }}{% endraw %}/api/scan/update-nuclei-times"
+    url: "{% raw %}{{ bitor_api_url }}{% endraw %}/api/scan/update-nuclei-times"
     method: POST
     headers:
       Content-Type: "application/json"

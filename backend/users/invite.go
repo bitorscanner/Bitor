@@ -7,8 +7,8 @@ import (
 	"log"
 	"net/http"
 	"net/mail"
-	"orbit/middleware"
-	"orbit/templates/email"
+	"bitor/middleware"
+	"bitor/templates/email"
 	"time"
 
 	"github.com/labstack/echo/v5"

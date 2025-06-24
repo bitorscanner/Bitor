@@ -1,7 +1,7 @@
 package templates
 
 import (
-	"orbit/auth" // Adjust the import path as necessary
+	"bitor/auth" // Adjust the import path as necessary
 
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
