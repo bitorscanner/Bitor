@@ -19,7 +19,11 @@
     body_format: json
     status_code: 200
 
-- name: Destory Scan
+- name: Check if VM should be preserved
+  debug:
+    msg: "VM preservation is {% if preserve_vm | default(false) %}enabled{% else %}disabled{% endif %} for this scan"
+
+- name: Destroy Scan (only if VM preservation is disabled)
   uri:
     url: "{% raw %}{{ bitor_api_url }}{% endraw %}/api/scan/destroy"
     method: POST
@@ -32,3 +36,9 @@
       }
     body_format: json
     status_code: 200
+  when: not (preserve_vm | default(false))
+
+- name: Log VM preservation notice
+  debug:
+    msg: "VM for scan {{ scan_id }} has been preserved for testing purposes. Remember to manually destroy it when done!"
+  when: preserve_vm | default(false)

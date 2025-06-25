@@ -17,6 +17,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"bitor/handlers"
+	"bitor/middleware"
 	_ "bitor/migrations" // ensure migrations are registered
 	"bitor/nuclei"
 	"bitor/routes"
@@ -189,6 +190,10 @@ func main() {
 	// Configure file serving and services after migrations are complete
 	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
 		log.Printf("Ansible base path in OnBeforeServe: %s", ansibleBasePath)
+
+		// Add request logging middleware (before other middlewares)
+		e.Router.Use(middleware.RequestLogger())
+		log.Printf("Request logging middleware enabled")
 
 		// Initialize the app
 		if err := setup.InitializeApp(app); err != nil {

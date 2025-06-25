@@ -55,19 +55,16 @@ func HandleImportNucleiScanResults(app *pocketbase.PocketBase) echo.HandlerFunc 
 		admin, _ := c.Get(apis.ContextAdminKey).(*pbModels.Admin)
 		record, _ := c.Get(apis.ContextAuthRecordKey).(*pbModels.Record)
 
-		// Check if either admin or user is authenticated
-		if admin == nil && record == nil {
-			return c.JSON(http.StatusUnauthorized, map[string]string{
-				"error": "Authentication required",
-			})
-		}
-
-		// Get user ID (either from admin or regular user)
+		// Get user ID (either from admin, regular user, or fallback for API key auth)
 		var userID string
 		if admin != nil {
 			userID = admin.Id
-		} else {
+		} else if record != nil {
 			userID = record.Id
+		} else {
+			// If neither admin nor user is set, this request was authenticated via API key
+			// by the middleware, so we'll use the scan's created_by field later
+			userID = "api-key-auth"
 		}
 
 		// Retrieve form values
@@ -300,10 +297,14 @@ func processFile(app *pocketbase.PocketBase, filePath string, scanID string, cli
 
 	// Get the created_by from the scan record
 	scanCreatedBy := record.GetString("created_by")
-	if scanCreatedBy == "" {
-		scanCreatedBy = userID // Fallback to the userID if not set in scan
+	if scanCreatedBy == "" || userID == "api-key-auth" {
+		if scanCreatedBy != "" {
+			userID = scanCreatedBy // Use the scan's created_by field for API key auth
+		} else {
+			userID = "system" // Fallback if nothing is available
+		}
 	}
-	logger.Printf("[DEBUG] Using created_by: %s for findings", scanCreatedBy)
+	logger.Printf("[DEBUG] Using created_by: %s for findings", userID)
 
 	// Process findings in parallel
 	processFindings(app, findings, clientID, scanID, logger, userID)

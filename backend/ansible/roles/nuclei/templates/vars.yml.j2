@@ -66,5 +66,9 @@ scan_api_key: '{{ api_key }}'
 bitor_api_url: 'http://localhost:8090'
 s3_provider_id: '{{ s3.scan.provider_id }}'
 client_id: '{{ client_id }}'
+{% if vm.provider_service == "AWS" %}
+vm_size: '{{ vm.aws_instance_type }}'
+{% else %}
 vm_size: '{{ vm.do_size }}'
+{% endif %}
 

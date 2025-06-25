@@ -51,6 +51,7 @@ export interface ScanData {
   frequency?: string;
   cron?: string;
   startImmediately?: boolean;
+  preserve_vm?: boolean;
 }
 
 export interface ScanFormData {
@@ -69,4 +70,5 @@ export interface ScanFormData {
   status: string;
   use_all_templates: boolean;
   selected_templates: string[];
+  preserve_vm?: boolean;
 }

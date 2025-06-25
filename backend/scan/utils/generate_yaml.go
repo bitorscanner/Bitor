@@ -59,20 +59,28 @@ func getProviderKeys(app *pocketbase.PocketBase, provider *models.Record) (map[s
 				continue
 			}
 
-			// Store the decrypted key with its type
-			if provider.GetString("provider_type") == "s3" {
-				if keyType == "access_key" {
-					keys["access_key"] = string(decryptedBytes)
-					log.Printf("Successfully decrypted access key for provider %s", provider.Id)
-				} else if keyType == "secret_key" {
-					keys["secret_key"] = string(decryptedBytes)
-					log.Printf("Successfully decrypted secret key for provider %s", provider.Id)
-				}
-			} else if provider.GetString("provider_type") == "digitalocean" {
-				// For DigitalOcean, we store the key as api_key regardless of key_type
-				keys["api_key"] = string(decryptedBytes)
-				log.Printf("Successfully decrypted API key for provider %s", provider.Id)
+					// Store the decrypted key with its type
+		if provider.GetString("provider_type") == "s3" {
+			if keyType == "access_key" {
+				keys["access_key"] = string(decryptedBytes)
+				log.Printf("Successfully decrypted access key for provider %s", provider.Id)
+			} else if keyType == "secret_key" {
+				keys["secret_key"] = string(decryptedBytes)
+				log.Printf("Successfully decrypted secret key for provider %s", provider.Id)
 			}
+		} else if provider.GetString("provider_type") == "aws" {
+			if keyType == "access_key" {
+				keys["access_key"] = string(decryptedBytes)
+				log.Printf("Successfully decrypted access key for AWS provider %s", provider.Id)
+			} else if keyType == "secret_key" {
+				keys["secret_key"] = string(decryptedBytes)
+				log.Printf("Successfully decrypted secret key for AWS provider %s", provider.Id)
+			}
+		} else if provider.GetString("provider_type") == "digitalocean" {
+			// For DigitalOcean, we store the key as api_key regardless of key_type
+			keys["api_key"] = string(decryptedBytes)
+			log.Printf("Successfully decrypted API key for provider %s", provider.Id)
+		}
 		}
 	}
 
@@ -85,6 +93,14 @@ func getProviderKeys(app *pocketbase.PocketBase, provider *models.Record) (map[s
 			return nil, fmt.Errorf("secret_key not found for provider %s", provider.Id)
 		}
 		log.Printf("Found both required keys for S3 provider")
+	} else if provider.GetString("provider_type") == "aws" {
+		if _, hasAccess := keys["access_key"]; !hasAccess {
+			return nil, fmt.Errorf("access_key not found for AWS provider %s", provider.Id)
+		}
+		if _, hasSecret := keys["secret_key"]; !hasSecret {
+			return nil, fmt.Errorf("secret_key not found for AWS provider %s", provider.Id)
+		}
+		log.Printf("Found both required keys for AWS provider")
 	} else if provider.GetString("provider_type") == "digitalocean" {
 		if _, hasKey := keys["api_key"]; !hasKey {
 			return nil, fmt.Errorf("api_key not found for provider %s", provider.Id)
@@ -143,6 +159,9 @@ func GenerateYAMLVars(app *pocketbase.PocketBase, scanID string) (string, error)
 		interactToken = ""
 	}
 
+	// Get preserve_vm setting from the scan record
+	preserveVM := record.GetBool("preserve_vm")
+	
 	// Start building YAML content with client info
 	yamlContent := fmt.Sprintf(`---
 scan_id: "%s"
@@ -151,14 +170,16 @@ client_hidden_name: "%s"
 client_id: "%s"
 interact_url: "%s"
 interact_token: "%s"
-api_key: "%s"`,
+api_key: "%s"
+preserve_vm: %t`,
 		scanID,
 		clientRecord.GetString("name"),
 		clientRecord.GetString("hidden_name"),
 		clientRecord.GetString("id"),
 		interactURL,
 		interactToken,
-		record.GetString("api_key"))
+		record.GetString("api_key"),
+		preserveVM)
 
 	// Get the scan's API key and encrypt it with Ansible vault
 	scanApiKey := record.GetString("api_key")

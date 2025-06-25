@@ -32,6 +32,7 @@
 	let frequency: 'one-time' | 'scheduled' = 'one-time'; // 'one-time' or 'scheduled'
 	let cronSchedule = '';
 	let startImmediately = false;
+	let preserveVM = false;
 
 	// Data collections with proper types
 	interface Target {
@@ -144,6 +145,7 @@
 		frequency = s.frequency;
 		cronSchedule = s.cron || '';
 		startImmediately = s.startImmediately;
+		preserveVM = s.preserve_vm || false;
 	}
 
 	function nextStep() {
@@ -167,6 +169,7 @@
 		frequency = 'one-time';
 		cronSchedule = '';
 		startImmediately = false;
+		preserveVM = false;
 		currentStep = 1;
 	}
 
@@ -222,7 +225,8 @@
 				startImmediately: shouldStart,
 				status: 'Created',
 				use_all_templates: useAllTemplates,
-				selected_templates: selectedTemplates
+				selected_templates: selectedTemplates,
+				preserve_vm: preserveVM
 			};
 
 			console.log('Scan data prepared:', scanData);
@@ -415,6 +419,22 @@
 						<p class="text-sm text-gray-500">Specify a cron expression for scheduling the scan.</p>
 					</Label>
 				{/if}
+				
+				<!-- Preserve VM Option -->
+				<div class="flex items-center space-x-3 p-3 border border-yellow-200 bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-800 rounded-lg">
+					<Toggle bind:checked={preserveVM} color="yellow" />
+					<div>
+						<div class="text-sm font-medium text-gray-900 dark:text-white">
+							Preserve VM for Testing
+						</div>
+						<div class="text-xs text-gray-500 dark:text-gray-400">
+							Keep the VM running after scan completion for investigation. 
+							<span class="font-semibold text-yellow-600 dark:text-yellow-400">
+								Remember to manually destroy it when done!
+							</span>
+						</div>
+					</div>
+				</div>
 				<div class="flex justify-between mt-6">
 					<Button color="alternative" on:click={previousStep}>Previous</Button>
 					<div class="space-x-2">

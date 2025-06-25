@@ -65,6 +65,11 @@
     name: string;
   }
 
+  interface InstanceType {
+    value: string;
+    name: string;
+  }
+
   const providerIcons = {
     aws: SiAmazon,
     digitalocean: SiDigitalocean,
@@ -96,6 +101,7 @@
   let stateBuckets: Provider[] = [];
   let scanBuckets: Provider[] = [];
   let dropletSizes: DropletSize[] = [];
+  let instanceTypes: InstanceType[] = [];
 
   async function fetchProfiles() {
     try {
@@ -184,14 +190,72 @@
     }
   }
 
+  // Function to fetch AWS instance types
+  async function fetchInstanceTypes(providerId: string) {
+    try {
+      console.log('Fetching AWS instance types for provider:', providerId);
+      const provider = await $pocketbase.collection('providers').getOne(providerId) as unknown as Provider;
+      console.log('Provider data:', provider);
+      
+      if (!provider.settings?.region) {
+        console.error('Provider has no region configured');
+        return;
+      }
+
+      const baseUrl = `${import.meta.env.VITE_API_BASE_URL}/api`;
+      const url = `${baseUrl}/aws/instance-types?provider=${providerId}&region=${provider.settings.region}`;
+      console.log('Fetching from URL:', url);
+      
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${$pocketbase.authStore.token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log('Response status:', response.status);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
+        throw new Error(`Failed to fetch instance types: ${response.status} ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log('Instance types data:', data);
+      
+      instanceTypes = data.map((instance: any) => ({
+        value: instance.id,
+        name: `${instance.name} - ${instance.description}`
+      }));
+
+      console.log('Mapped instance types:', instanceTypes);
+
+      // Set default instance type
+      if (provider.settings?.instance_type) {
+        newProfile.vm_size = provider.settings.instance_type;
+      } else if (instanceTypes.length > 0) {
+        newProfile.vm_size = instanceTypes[0].value;
+      }
+      console.log('Set vm_size to:', newProfile.vm_size);
+    } catch (error) {
+      console.error('Error fetching instance types:', error);
+      instanceTypes = [];
+    }
+  }
+
   // Watch for changes in vm_provider
   $: {
     if (newProfile.vm_provider) {
       const selectedProvider = vmProviders.find(p => p.id === newProfile.vm_provider);
       if (selectedProvider?.provider_type.toLowerCase() === 'digitalocean') {
         fetchDropletSizes(selectedProvider.id);
+        instanceTypes = [];
+      } else if (selectedProvider?.provider_type.toLowerCase() === 'aws') {
+        fetchInstanceTypes(selectedProvider.id);
+        dropletSizes = [];
       } else {
         dropletSizes = [];
+        instanceTypes = [];
         newProfile.vm_size = '';
       }
     }
@@ -364,7 +428,7 @@
                   {/if}
                 </TableBodyCell>
                 <TableBodyCell class="p-4 text-center">
-                  {#if profile.expand?.vm_provider?.provider_type.toLowerCase() === 'digitalocean'}
+                  {#if profile.expand?.vm_provider?.provider_type.toLowerCase() === 'digitalocean' || profile.expand?.vm_provider?.provider_type.toLowerCase() === 'aws'}
                     {#if profile.vm_size}
                       <div class="text-sm">
                         <span class="font-medium">{profile.vm_size}</span>
@@ -488,7 +552,7 @@
               </Select>
             </div>
 
-            <!-- VM Size (only shown for DigitalOcean) -->
+            <!-- VM Size (shown for DigitalOcean and AWS) -->
             {#if vmProviders.find(p => p.id === newProfile.vm_provider)?.provider_type.toLowerCase() === 'digitalocean'}
               <div>
                 <Label for="vm_size" class="mb-2">VM Size</Label>
@@ -497,6 +561,21 @@
                   items={dropletSizes}
                   bind:value={newProfile.vm_size}
                   placeholder="Select a VM size"
+                  class="mt-2"
+                >
+                  <div slot="item" let:item class="flex items-center gap-2">
+                    {item.name}
+                  </div>
+                </Select>
+              </div>
+            {:else if vmProviders.find(p => p.id === newProfile.vm_provider)?.provider_type.toLowerCase() === 'aws'}
+              <div>
+                <Label for="vm_size" class="mb-2">Instance Type</Label>
+                <Select
+                  id="vm_size"
+                  items={instanceTypes}
+                  bind:value={newProfile.vm_size}
+                  placeholder="Select an instance type"
                   class="mt-2"
                 >
                   <div slot="item" let:item class="flex items-center gap-2">
