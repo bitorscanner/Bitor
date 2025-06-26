@@ -305,7 +305,7 @@
 			} else if ([
 				'alienvault', 'binaryedge', 'bufferover', 'censys', 'certspotter',
 				'chaos', 'github', 'intelx', 'passivetotal', 'securitytrails',
-				'shodan', 'virustotal'
+				'shodan', 'virustotal', 'whoisxml'
 			].includes(type)) {
 				uses = ['discovery'];
 			}
@@ -365,7 +365,7 @@
 			} else if ([
 				'alienvault', 'binaryedge', 'bufferover', 'censys', 'certspotter',
 				'chaos', 'github', 'intelx', 'passivetotal', 'securitytrails',
-				'shodan', 'virustotal'
+				'shodan', 'virustotal', 'whoisxml'
 			].includes(type)) {
 				settings = {
 					api_key: ''

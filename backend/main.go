@@ -254,6 +254,92 @@ func main() {
 		// Expose debug routes for development purposes
 		handlers.RegisterDebugRoutes(e)
 
+		// Initialize attack surface handlers and register routes directly
+		attackSurfaceHandlers := handlers.NewAttackSurfaceHandlers(app)
+
+		// Register attack surface routes directly here
+		fmt.Println("DEBUG: Registering attack surface routes directly in main OnBeforeServe")
+		e.Router.GET("/api/attack-surface/sources", func(c echo.Context) error {
+			fmt.Println("DEBUG: Sources endpoint called in main!")
+			return attackSurfaceHandlers.HandleGetAvailableSources(c)
+		})
+		e.Router.GET("/api/attack-surface/subdomains", func(c echo.Context) error {
+			fmt.Println("DEBUG: Subdomains endpoint called in main!")
+			return attackSurfaceHandlers.HandleGetSubdomains(c)
+		})
+		e.Router.GET("/api/attack-surface/subdomains/stats", func(c echo.Context) error {
+			fmt.Println("DEBUG: Stats endpoint called in main!")
+			return attackSurfaceHandlers.HandleGetDomainStats(c)
+		})
+		e.Router.POST("/api/attack-surface/subdomains/scan", func(c echo.Context) error {
+			fmt.Println("DEBUG: Scan endpoint called in main!")
+			return attackSurfaceHandlers.HandleStartSubdomainScan(c)
+		})
+		e.Router.POST("/api/attack-surface/tld/discover", func(c echo.Context) error {
+			fmt.Println("DEBUG: TLD Discovery endpoint called in main!")
+			return attackSurfaceHandlers.HandleStartTLDDiscovery(c)
+		})
+		e.Router.GET("/api/attack-surface/tld", func(c echo.Context) error {
+			fmt.Println("DEBUG: TLD Get endpoint called in main!")
+			return attackSurfaceHandlers.HandleGetTLDs(c)
+		})
+
+		// Netblock discovery routes
+		e.Router.POST("/api/attack-surface/netblock/discover", func(c echo.Context) error {
+			fmt.Println("DEBUG: Netblock Discovery endpoint called in main!")
+			return attackSurfaceHandlers.HandleStartNetblockDiscovery(c)
+		})
+		e.Router.GET("/api/attack-surface/netblocks", func(c echo.Context) error {
+			fmt.Println("DEBUG: Netblocks Get endpoint called in main!")
+			return attackSurfaceHandlers.HandleGetNetblocks(c)
+		})
+		e.Router.GET("/api/attack-surface/ips", func(c echo.Context) error {
+			fmt.Println("DEBUG: IPs Get endpoint called in main!")
+			return attackSurfaceHandlers.HandleGetIPs(c)
+		})
+		e.Router.GET("/api/attack-surface/netblocks/stats", func(c echo.Context) error {
+			fmt.Println("DEBUG: Netblock Stats endpoint called in main!")
+			return attackSurfaceHandlers.HandleGetNetblockStats(c)
+		})
+
+		// Port scanning routes
+		e.Router.POST("/api/attack-surface/ports/scan", func(c echo.Context) error {
+			fmt.Println("DEBUG: Port Scan endpoint called in main!")
+			return attackSurfaceHandlers.HandleStartPortScan(c)
+		})
+		e.Router.GET("/api/attack-surface/ports/scan/:scan_id/progress", func(c echo.Context) error {
+			fmt.Println("DEBUG: Port Scan Progress endpoint called in main!")
+			return attackSurfaceHandlers.HandleGetPortScanProgress(c)
+		})
+		e.Router.GET("/api/attack-surface/ports", func(c echo.Context) error {
+			fmt.Println("DEBUG: Ports Get endpoint called in main!")
+			return attackSurfaceHandlers.HandleGetPorts(c)
+		})
+		e.Router.GET("/api/attack-surface/ports/scans", func(c echo.Context) error {
+			fmt.Println("DEBUG: Port Scans Get endpoint called in main!")
+			return attackSurfaceHandlers.HandleGetPortScans(c)
+		})
+		e.Router.GET("/api/attack-surface/ports/stats", func(c echo.Context) error {
+			fmt.Println("DEBUG: Port Stats endpoint called in main!")
+			return attackSurfaceHandlers.HandleGetPortStats(c)
+		})
+
+		fmt.Println("DEBUG: Attack surface routes registered successfully in main!")
+		fmt.Println("DEBUG: GET /api/attack-surface/sources -> HandleGetAvailableSources")
+		fmt.Println("DEBUG: GET /api/attack-surface/subdomains -> HandleGetSubdomains")
+		fmt.Println("DEBUG: GET /api/attack-surface/subdomains/stats -> HandleGetDomainStats")
+		fmt.Println("DEBUG: POST /api/attack-surface/subdomains/scan -> HandleStartSubdomainScan")
+		fmt.Println("DEBUG: POST /api/attack-surface/tld/discover -> HandleStartTLDDiscovery")
+		fmt.Println("DEBUG: GET /api/attack-surface/tld -> HandleGetTLDs")
+		fmt.Println("DEBUG: POST /api/attack-surface/netblock/discover -> HandleStartNetblockDiscovery")
+		fmt.Println("DEBUG: GET /api/attack-surface/netblocks -> HandleGetNetblocks")
+		fmt.Println("DEBUG: GET /api/attack-surface/ips -> HandleGetIPs")
+		fmt.Println("DEBUG: GET /api/attack-surface/netblocks/stats -> HandleGetNetblockStats")
+		fmt.Println("DEBUG: POST /api/attack-surface/ports/scan -> HandleStartPortScan")
+		fmt.Println("DEBUG: GET /api/attack-surface/ports -> HandleGetPorts")
+		fmt.Println("DEBUG: GET /api/attack-surface/ports/scans -> HandleGetPortScans")
+		fmt.Println("DEBUG: GET /api/attack-surface/ports/stats -> HandleGetPortStats")
+
 		// Serve static files from pb_public directory
 		e.Router.GET("/*", echo.WrapHandler(http.FileServer(http.FS(distDirFS))))
 

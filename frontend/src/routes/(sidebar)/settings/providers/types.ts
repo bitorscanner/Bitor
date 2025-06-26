@@ -119,7 +119,8 @@ export type DiscoveryServiceType =
   | 'passivetotal'
   | 'securitytrails'
   | 'shodan'
-  | 'virustotal';
+  | 'virustotal'
+  | 'whoisxml';
 
 export interface DiscoveryService {
   id?: string;
@@ -181,6 +182,10 @@ export const DISCOVERY_SERVICES = {
   virustotal: {
     name: 'VirusTotal',
     description: 'File and URL analysis platform'
+  },
+  whoisxml: {
+    name: 'WhoisXML API',
+    description: 'IP netblocks and WHOIS intelligence platform'
   }
 } as const;
 

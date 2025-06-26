@@ -37,7 +37,10 @@
 		CogSolid,
 		ServerSolid,
 		GlobeSolid,
-		ShieldCheckSolid
+		ShieldCheckSolid,
+		GlobeOutline,
+		SearchOutline,
+		ServerOutline
 	} from 'flowbite-svelte-icons';
 
 	// Import the Target icon from lucide-svelte and Nuclei icon
@@ -86,19 +89,32 @@
 		{ 
 			name: 'Attack Surface', 
 			icon: GlobeSolid,
-			disabled: true,
 			children: {
 				'Domains': {
 					href: '/attack-surface/domains',
-					icon: SearchSolid
+					icon: GlobeOutline
 				},
-				'IPs': {
+				'TLD Discovery': {
+					href: '/attack-surface/tld',
+					icon: SearchOutline
+				},
+				'Netblocks': {
+					href: '/attack-surface/netblocks',
+					icon: ServerOutline
+				},
+				'Port Scanning': {
+					href: '/attack-surface/ports',
+					icon: ShieldCheckSolid
+				},
+				'IP Addresses': {
 					href: '/attack-surface/ips',
-					icon: ServerSolid
+					icon: ServerOutline,
+					disabled: true
 				},
 				'URLs': {
 					href: '/attack-surface/urls',
-					icon: GlobeSolid
+					icon: GlobeSolid,
+					disabled: true
 				}
 			}
 		},
@@ -222,7 +238,7 @@
 						<SidebarDropdownWrapper 
 							bind:isOpen={dropdowns[post.name]} 
 							label={post.name} 
-							class="pr-3 {post.disabled ? 'opacity-50 cursor-not-allowed' : ''}"
+							class="pr-3"
 						>
 							<AngleDownOutline slot="arrowdown" strokeWidth="3.3" size="sm" />
 							<AngleUpOutline slot="arrowup" strokeWidth="3.3" size="sm" />
@@ -231,9 +247,9 @@
 							{#each Object.entries(post.children) as [title, item]}
 								<SidebarItem
 									label={title}
-									href={item.href}
+									href={item.disabled ? undefined : item.href}
 									spanClass="ml-9"
-									class="{itemClass} {post.disabled ? 'pointer-events-none opacity-50' : ''}"
+									class="{itemClass} {item.disabled ? 'pointer-events-none opacity-50' : ''}"
 								>
 									<svelte:component 
 										this={item.icon} 

@@ -21,7 +21,7 @@
   async function loadApiKey() {
     try {
       const result = await $pocketbase.collection('api_keys').getList(1, 1, {
-        filter: `provider = "${provider.id}" && key_type = "discovery"`
+        filter: `provider = "${provider.id}" && key_type = "api_key"`
       });
 
       if (result.items.length > 0) {
@@ -50,14 +50,15 @@
         // Update existing API key
         await $pocketbase.collection('api_keys').update(existingApiKey, {
           key: apiKey,
-          key_type: 'discovery',
+          key_type: 'api_key',
           provider: provider.id
         });
       } else {
         // Create new API key
         const result = await $pocketbase.collection('api_keys').create({
+          name: `${provider.provider_type} Discovery API Key`,
           key: apiKey,
-          key_type: 'discovery',
+          key_type: 'api_key',
           provider: provider.id
         });
         existingApiKey = result.id;
