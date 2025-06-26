@@ -113,8 +113,7 @@
 				},
 				'URLs': {
 					href: '/attack-surface/urls',
-					icon: GlobeSolid,
-					disabled: true
+					icon: GlobeSolid
 				}
 			}
 		},

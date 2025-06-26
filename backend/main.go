@@ -323,6 +323,34 @@ func main() {
 			fmt.Println("DEBUG: Port Stats endpoint called in main!")
 			return attackSurfaceHandlers.HandleGetPortStats(c)
 		})
+		e.Router.POST("/api/attack-surface/urls/scan", func(c echo.Context) error {
+			fmt.Println("DEBUG: URL Scan endpoint called in main!")
+			return attackSurfaceHandlers.HandleStartURLScan(c)
+		})
+		e.Router.GET("/api/attack-surface/urls/scan/:scan_id/progress", func(c echo.Context) error {
+			fmt.Println("DEBUG: URL Scan Progress endpoint called in main!")
+			return attackSurfaceHandlers.HandleGetURLScanProgress(c)
+		})
+		e.Router.GET("/api/attack-surface/urls", func(c echo.Context) error {
+			fmt.Println("DEBUG: URLs Get endpoint called in main!")
+			return attackSurfaceHandlers.HandleGetURLs(c)
+		})
+		e.Router.GET("/api/attack-surface/urls/scans", func(c echo.Context) error {
+			fmt.Println("DEBUG: URL Scans Get endpoint called in main!")
+			return attackSurfaceHandlers.HandleGetURLScans(c)
+		})
+		e.Router.GET("/api/attack-surface/urls/stats", func(c echo.Context) error {
+			fmt.Println("DEBUG: URL Stats endpoint called in main!")
+			return attackSurfaceHandlers.HandleGetURLStats(c)
+		})
+		e.Router.POST("/api/attack-surface/nuclei/collect-targets", func(c echo.Context) error {
+			fmt.Println("DEBUG: Nuclei Collect Targets endpoint called in main!")
+			return attackSurfaceHandlers.HandleCollectAttackSurfaceTargets(c)
+		})
+		e.Router.POST("/api/attack-surface/nuclei/create-target", func(c echo.Context) error {
+			fmt.Println("DEBUG: Nuclei Create Target endpoint called in main!")
+			return attackSurfaceHandlers.HandleCreateNucleiTargetFromAttackSurface(c)
+		})
 
 		fmt.Println("DEBUG: Attack surface routes registered successfully in main!")
 		fmt.Println("DEBUG: GET /api/attack-surface/sources -> HandleGetAvailableSources")
@@ -339,6 +367,12 @@ func main() {
 		fmt.Println("DEBUG: GET /api/attack-surface/ports -> HandleGetPorts")
 		fmt.Println("DEBUG: GET /api/attack-surface/ports/scans -> HandleGetPortScans")
 		fmt.Println("DEBUG: GET /api/attack-surface/ports/stats -> HandleGetPortStats")
+		fmt.Println("DEBUG: POST /api/attack-surface/urls/scan -> HandleStartURLScan")
+		fmt.Println("DEBUG: GET /api/attack-surface/urls -> HandleGetURLs")
+		fmt.Println("DEBUG: GET /api/attack-surface/urls/scans -> HandleGetURLScans")
+		fmt.Println("DEBUG: GET /api/attack-surface/urls/stats -> HandleGetURLStats")
+		fmt.Println("DEBUG: POST /api/attack-surface/nuclei/collect-targets -> HandleCollectAttackSurfaceTargets")
+		fmt.Println("DEBUG: POST /api/attack-surface/nuclei/create-target -> HandleCreateNucleiTargetFromAttackSurface")
 
 		// Serve static files from pb_public directory
 		e.Router.GET("/*", echo.WrapHandler(http.FileServer(http.FS(distDirFS))))

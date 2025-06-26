@@ -2,6 +2,7 @@
 	import '../../app.pcss';
 	import Navbar from './Navbar.svelte';
 	import Sidebar from './Sidebar.svelte';
+	import ToastContainer from '$lib/components/ToastContainer.svelte';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { pocketbase } from '@lib/stores/pocketbase';
@@ -34,4 +35,7 @@
 			</div>
 		</main>
 	</div>
+	
+	<!-- Toast Notifications -->
+	<ToastContainer />
 </div>

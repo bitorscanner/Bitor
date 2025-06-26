@@ -23,6 +23,7 @@ type AttackSurfaceHandlers struct {
 	netblockSvc      *services.NetblockService
 	portScanSvc      *services.PortScanService
 	subfinderService *services.SubfinderService
+	urlScanSvc       *services.URLScanService
 }
 
 // NewAttackSurfaceHandlers creates a new instance of AttackSurfaceHandlers
@@ -33,6 +34,7 @@ func NewAttackSurfaceHandlers(app *pocketbase.PocketBase) *AttackSurfaceHandlers
 		netblockSvc:      services.NewNetblockService(app),
 		portScanSvc:      services.NewPortScanService(app),
 		subfinderService: services.NewSubfinderService(app),
+		urlScanSvc:       services.NewURLScanService(app),
 	}
 }
 
@@ -89,6 +91,32 @@ type PortScanRequest struct {
 	CloudProvider    string   `json:"cloud_provider,omitempty"`   // Cloud provider for remote execution
 	NmapIntegration  bool     `json:"nmap_integration,omitempty"` // Run nmap for service detection
 	NmapCommand      string   `json:"nmap_command,omitempty"`     // Custom nmap command
+}
+
+// URLScanRequest represents the request to start a URL scan
+type URLScanRequest struct {
+	ClientID          string   `json:"client_id"`
+	TargetURLs        []string `json:"target_urls,omitempty"`    // Manual URL list
+	IncludePorts      bool     `json:"include_ports"`            // Include URLs from port scan results
+	IncludeDomains    bool     `json:"include_domains"`          // Include URLs from discovered domains
+	IncludeSubdomains bool     `json:"include_subdomains"`       // Include URLs from subdomains
+	Schemes           []string `json:"schemes,omitempty"`        // URL schemes (http, https)
+	Ports             []int    `json:"ports,omitempty"`          // Specific ports to scan
+	OnlyWebPorts      bool     `json:"only_web_ports"`           // Only scan common web ports
+	Threads           int      `json:"threads"`                  // Worker threads
+	Timeout           int      `json:"timeout"`                  // Request timeout in seconds
+	Retries           int      `json:"retries"`                  // Number of retries
+	FollowRedirects   bool     `json:"follow_redirects"`         // Follow HTTP redirects
+	TechDetection     bool     `json:"tech_detection"`           // Enable technology detection
+	StatusCode        bool     `json:"status_code"`              // Include status codes
+	ContentLength     bool     `json:"content_length"`           // Include content length
+	ResponseTime      bool     `json:"response_time"`            // Include response time
+	MatchRegex        string   `json:"match_regex,omitempty"`    // Custom regex to match
+	FilterRegex       string   `json:"filter_regex,omitempty"`   // Custom regex to filter
+	OutputAll         bool     `json:"output_all"`               // Output all URLs (even failed)
+	Silent            bool     `json:"silent"`                   // Silent mode
+	ExecutionMode     string   `json:"execution_mode"`           // "local" or "cloud"
+	CloudProvider     string   `json:"cloud_provider,omitempty"` // Cloud provider for remote execution
 }
 
 // Note: API key management is handled through the existing providers system
@@ -999,6 +1027,528 @@ func (h *AttackSurfaceHandlers) HandleGetPortStats(c echo.Context) error {
 	})
 }
 
+// HandleStartURLScan starts a new URL scan
+func (h *AttackSurfaceHandlers) HandleStartURLScan(c echo.Context) error {
+	var req URLScanRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false,
+			"message": "Invalid request format",
+		})
+	}
+
+	if req.ClientID == "" {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false,
+			"message": "Client ID is required",
+		})
+	}
+
+	// Validate that at least one source is specified
+	if !req.IncludePorts && !req.IncludeDomains && !req.IncludeSubdomains && len(req.TargetURLs) == 0 {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false,
+			"message": "At least one URL source must be specified",
+		})
+	}
+
+	// Convert handler request to service request
+	serviceReq := services.URLScanRequest{
+		ClientID:          req.ClientID,
+		TargetURLs:        req.TargetURLs,
+		IncludePorts:      req.IncludePorts,
+		IncludeDomains:    req.IncludeDomains,
+		IncludeSubdomains: req.IncludeSubdomains,
+		Schemes:           req.Schemes,
+		Ports:             req.Ports,
+		OnlyWebPorts:      req.OnlyWebPorts,
+		Threads:           req.Threads,
+		Timeout:           req.Timeout,
+		Retries:           req.Retries,
+		FollowRedirects:   req.FollowRedirects,
+		TechDetection:     req.TechDetection,
+		StatusCode:        req.StatusCode,
+		ContentLength:     req.ContentLength,
+		ResponseTime:      req.ResponseTime,
+		MatchRegex:        req.MatchRegex,
+		FilterRegex:       req.FilterRegex,
+		OutputAll:         req.OutputAll,
+		Silent:            req.Silent,
+		ExecutionMode:     req.ExecutionMode,
+		CloudProvider:     req.CloudProvider,
+	}
+
+	// Start async scan
+	scanID, err := h.urlScanSvc.StartAsyncURLScan(serviceReq)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"success": false,
+			"message": fmt.Sprintf("Failed to start URL scan: %v", err),
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true,
+		"scan_id": scanID,
+		"message": "URL scan started successfully",
+	})
+}
+
+// HandleGetURLScanProgress retrieves the progress of a running URL scan
+func (h *AttackSurfaceHandlers) HandleGetURLScanProgress(c echo.Context) error {
+	scanID := c.PathParam("scan_id")
+	if scanID == "" {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false,
+			"message": "Scan ID is required",
+		})
+	}
+
+	progress, err := h.urlScanSvc.GetScanProgress(scanID)
+	if err != nil {
+		return c.JSON(http.StatusNotFound, map[string]interface{}{
+			"success": false,
+			"message": "Scan not found",
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success":  true,
+		"progress": progress,
+	})
+}
+
+// HandleGetURLs retrieves stored URL scan results
+func (h *AttackSurfaceHandlers) HandleGetURLs(c echo.Context) error {
+	clientID := c.QueryParam("client_id")
+	host := c.QueryParam("host")
+
+	if clientID == "" {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false,
+			"message": "Client ID is required",
+		})
+	}
+
+	results, err := h.urlScanSvc.GetSavedURLs(clientID, host)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"success": false,
+			"message": "Failed to retrieve URLs",
+		})
+	}
+
+	// Transform records to expected frontend format
+	var urls []map[string]interface{}
+	for _, record := range results {
+		var technologies []string
+		var hash map[string]string
+		var cnames []string
+		var chain []string
+
+		// Parse JSON fields
+		if techStr := record.GetString("technologies"); techStr != "" {
+			json.Unmarshal([]byte(techStr), &technologies)
+		}
+		if hashStr := record.GetString("hash"); hashStr != "" {
+			json.Unmarshal([]byte(hashStr), &hash)
+		}
+		if cnamesStr := record.GetString("cnames"); cnamesStr != "" {
+			json.Unmarshal([]byte(cnamesStr), &cnames)
+		}
+		if chainStr := record.GetString("chain"); chainStr != "" {
+			json.Unmarshal([]byte(chainStr), &chain)
+		}
+
+		url := map[string]interface{}{
+			"id":             record.Id,
+			"url":            record.GetString("url"),
+			"scheme":         record.GetString("scheme"),
+			"host":           record.GetString("host"),
+			"port":           record.GetInt("port"),
+			"path":           record.GetString("path"),
+			"status_code":    record.GetInt("status_code"),
+			"content_length": record.GetInt("content_length"),
+			"response_time":  record.GetString("response_time"),
+			"title":          record.GetString("title"),
+			"server":         record.GetString("server"),
+			"content_type":   record.GetString("content_type"),
+			"final_url":      record.GetString("final_url"),
+			"source":         record.GetString("source"),
+			"ip":             record.GetString("ip"),
+			"cdn":            record.GetString("cdn"),
+			"webserver":      record.GetString("webserver"),
+			"technologies":   technologies,
+			"hash":           hash,
+			"cnames":         cnames,
+			"chain":          chain,
+			"scan_id":        record.GetString("scan_id"),
+			"discovered_at":  record.GetDateTime("discovered_at"),
+			"created":        record.Created,
+			"updated":        record.Updated,
+		}
+		urls = append(urls, url)
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true,
+		"urls":    urls,
+		"total":   len(urls),
+	})
+}
+
+// HandleGetURLScans retrieves stored URL scan summaries
+func (h *AttackSurfaceHandlers) HandleGetURLScans(c echo.Context) error {
+	clientID := c.QueryParam("client_id")
+
+	if clientID == "" {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false,
+			"message": "Client ID is required",
+		})
+	}
+
+	results, err := h.urlScanSvc.GetSavedScans(clientID)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"success": false,
+			"message": "Failed to retrieve URL scans",
+		})
+	}
+
+	// Transform records to expected frontend format
+	var scans []map[string]interface{}
+	for _, record := range results {
+		var stats map[string]int
+		if statsStr := record.GetString("stats"); statsStr != "" {
+			json.Unmarshal([]byte(statsStr), &stats)
+		}
+
+		scan := map[string]interface{}{
+			"id":             record.Id,
+			"scan_id":        record.GetString("scan_id"),
+			"start_time":     record.GetDateTime("start_time"),
+			"end_time":       record.GetDateTime("end_time"),
+			"duration":       record.GetString("duration"),
+			"total_targets":  record.GetInt("total_targets"),
+			"live_urls":      record.GetInt("live_urls"),
+			"execution_mode": record.GetString("execution_mode"),
+			"cloud_provider": record.GetString("cloud_provider"),
+			"httpx_version":  record.GetString("httpx_version"),
+			"stats":          stats,
+			"created":        record.Created,
+			"updated":        record.Updated,
+		}
+		scans = append(scans, scan)
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true,
+		"scans":   scans,
+		"total":   len(scans),
+	})
+}
+
+// HandleGetURLStats retrieves URL scan statistics
+func (h *AttackSurfaceHandlers) HandleGetURLStats(c echo.Context) error {
+	clientID := c.QueryParam("client_id")
+	if clientID == "" {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false,
+			"message": "Client ID is required",
+		})
+	}
+
+	// Get total URLs count
+	totalURLs, err := h.app.Dao().FindRecordsByFilter(
+		"attack_surface_urls",
+		"client = {:client}",
+		"",
+		0,
+		-1,
+		map[string]interface{}{
+			"client": clientID,
+		},
+	)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"success": false,
+			"message": "Failed to get URL statistics",
+		})
+	}
+
+	// Calculate statistics
+	uniqueHosts := make(map[string]bool)
+	statusStats := make(map[int]int)
+	schemeStats := make(map[string]int)
+	portStats := make(map[int]int)
+	techStats := make(map[string]int)
+	sourceStats := make(map[string]int)
+
+	for _, record := range totalURLs {
+		host := record.GetString("host")
+		statusCode := record.GetInt("status_code")
+		scheme := record.GetString("scheme")
+		port := record.GetInt("port")
+		source := record.GetString("source")
+
+		uniqueHosts[host] = true
+		statusStats[statusCode]++
+		schemeStats[scheme]++
+		portStats[port]++
+		if source != "" {
+			sourceStats[source]++
+		}
+
+		// Parse technologies
+		if techStr := record.GetString("technologies"); techStr != "" {
+			var technologies []string
+			if json.Unmarshal([]byte(techStr), &technologies) == nil {
+				for _, tech := range technologies {
+					techStats[tech]++
+				}
+			}
+		}
+	}
+
+	// Get scan count
+	scans, err := h.app.Dao().FindRecordsByFilter(
+		"attack_surface_url_scans",
+		"client = {:client}",
+		"",
+		0,
+		-1,
+		map[string]interface{}{
+			"client": clientID,
+		},
+	)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"success": false,
+			"message": "Failed to get scan count",
+		})
+	}
+
+	// Find most recent scan
+	var latestScan map[string]interface{}
+	if len(scans) > 0 {
+		latest := scans[0] // Already ordered by -start_time
+		var stats map[string]int
+		if statsStr := latest.GetString("stats"); statsStr != "" {
+			json.Unmarshal([]byte(statsStr), &stats)
+		}
+
+		latestScan = map[string]interface{}{
+			"scan_id":        latest.GetString("scan_id"),
+			"start_time":     latest.GetDateTime("start_time"),
+			"end_time":       latest.GetDateTime("end_time"),
+			"duration":       latest.GetString("duration"),
+			"total_targets":  latest.GetInt("total_targets"),
+			"live_urls":      latest.GetInt("live_urls"),
+			"execution_mode": latest.GetString("execution_mode"),
+			"stats":          stats,
+		}
+	}
+
+	// Top 5 technologies
+	type techCount struct {
+		Technology string `json:"technology"`
+		Count      int    `json:"count"`
+	}
+	var topTechs []techCount
+	for tech, count := range techStats {
+		topTechs = append(topTechs, techCount{Technology: tech, Count: count})
+	}
+	// Sort by count descending
+	for i := 0; i < len(topTechs)-1; i++ {
+		for j := i + 1; j < len(topTechs); j++ {
+			if topTechs[j].Count > topTechs[i].Count {
+				topTechs[i], topTechs[j] = topTechs[j], topTechs[i]
+			}
+		}
+	}
+	if len(topTechs) > 5 {
+		topTechs = topTechs[:5]
+	}
+
+	// Status code ranges
+	statusRanges := map[string]int{
+		"2xx": 0,
+		"3xx": 0,
+		"4xx": 0,
+		"5xx": 0,
+	}
+	for code, count := range statusStats {
+		if code >= 200 && code < 300 {
+			statusRanges["2xx"] += count
+		} else if code >= 300 && code < 400 {
+			statusRanges["3xx"] += count
+		} else if code >= 400 && code < 500 {
+			statusRanges["4xx"] += count
+		} else if code >= 500 {
+			statusRanges["5xx"] += count
+		}
+	}
+
+	stats := map[string]interface{}{
+		"total_urls":       len(totalURLs),
+		"unique_hosts":     len(uniqueHosts),
+		"total_scans":      len(scans),
+		"status_breakdown": statusRanges,
+		"scheme_breakdown": schemeStats,
+		"top_technologies": topTechs,
+		"source_breakdown": sourceStats,
+		"latest_scan":      latestScan,
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true,
+		"stats":   stats,
+	})
+}
+
+// AttackSurfaceTargetRequest represents a request for collecting attack surface targets for nuclei
+type AttackSurfaceTargetRequest struct {
+	ClientID          string   `json:"client_id"`
+	IncludeDomains    bool     `json:"include_domains"`    // Include discovered domains
+	IncludeSubdomains bool     `json:"include_subdomains"` // Include discovered subdomains
+	IncludePorts      bool     `json:"include_ports"`      // Include IPs with open ports
+	IncludeNetblocks  bool     `json:"include_netblocks"`  // Include IPs from netblocks
+	IncludeURLs       bool     `json:"include_urls"`       // Include discovered URLs
+	Schemes           []string `json:"schemes,omitempty"`  // URL schemes for domains/IPs (http, https)
+	Ports             []int    `json:"ports,omitempty"`    // Specific ports to include for IPs/domains
+	OnlyWebPorts      bool     `json:"only_web_ports"`     // Only include common web ports
+	ManualTargets     []string `json:"manual_targets"`     // Additional manual targets
+}
+
+// CreateNucleiTargetRequest represents a request to create a nuclei target from attack surface
+type CreateNucleiTargetRequest struct {
+	Name string `json:"name"`
+	AttackSurfaceTargetRequest
+}
+
+// HandleCollectAttackSurfaceTargets collects targets from attack surface for nuclei scanning
+func (h *AttackSurfaceHandlers) HandleCollectAttackSurfaceTargets(c echo.Context) error {
+	var req AttackSurfaceTargetRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false,
+			"message": "Invalid request format",
+		})
+	}
+
+	if req.ClientID == "" {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false,
+			"message": "Client ID is required",
+		})
+	}
+
+	// Validate that at least one source is specified
+	if !req.IncludeDomains && !req.IncludeSubdomains && !req.IncludePorts &&
+		!req.IncludeNetblocks && !req.IncludeURLs && len(req.ManualTargets) == 0 {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false,
+			"message": "At least one target source must be specified",
+		})
+	}
+
+	// Convert to service request format
+	serviceReq := services.AttackSurfaceTargetRequest{
+		ClientID:          req.ClientID,
+		IncludeDomains:    req.IncludeDomains,
+		IncludeSubdomains: req.IncludeSubdomains,
+		IncludePorts:      req.IncludePorts,
+		IncludeNetblocks:  req.IncludeNetblocks,
+		IncludeURLs:       req.IncludeURLs,
+		Schemes:           req.Schemes,
+		Ports:             req.Ports,
+		OnlyWebPorts:      req.OnlyWebPorts,
+		ManualTargets:     req.ManualTargets,
+	}
+
+	// Collect targets
+	result, err := h.urlScanSvc.CollectAttackSurfaceTargets(serviceReq)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"success": false,
+			"message": fmt.Sprintf("Failed to collect attack surface targets: %v", err),
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success":       true,
+		"client_id":     result.ClientID,
+		"total_targets": result.TotalTargets,
+		"targets":       result.Targets,
+		"sources":       result.Sources,
+		"stats":         result.Stats,
+	})
+}
+
+// HandleCreateNucleiTargetFromAttackSurface creates a nuclei target record from attack surface data
+func (h *AttackSurfaceHandlers) HandleCreateNucleiTargetFromAttackSurface(c echo.Context) error {
+	var req CreateNucleiTargetRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false,
+			"message": "Invalid request format",
+		})
+	}
+
+	if req.Name == "" {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false,
+			"message": "Target name is required",
+		})
+	}
+
+	if req.ClientID == "" {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false,
+			"message": "Client ID is required",
+		})
+	}
+
+	// Validate that at least one source is specified
+	if !req.IncludeDomains && !req.IncludeSubdomains && !req.IncludePorts &&
+		!req.IncludeNetblocks && !req.IncludeURLs && len(req.ManualTargets) == 0 {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false,
+			"message": "At least one target source must be specified",
+		})
+	}
+
+	// Convert to service request format
+	serviceReq := services.AttackSurfaceTargetRequest{
+		ClientID:          req.ClientID,
+		IncludeDomains:    req.IncludeDomains,
+		IncludeSubdomains: req.IncludeSubdomains,
+		IncludePorts:      req.IncludePorts,
+		IncludeNetblocks:  req.IncludeNetblocks,
+		IncludeURLs:       req.IncludeURLs,
+		Schemes:           req.Schemes,
+		Ports:             req.Ports,
+		OnlyWebPorts:      req.OnlyWebPorts,
+		ManualTargets:     req.ManualTargets,
+	}
+
+	// Create nuclei target
+	targetID, err := h.urlScanSvc.CreateNucleiTargetFromAttackSurface(req.Name, serviceReq)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"success": false,
+			"message": fmt.Sprintf("Failed to create nuclei target: %v", err),
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success":   true,
+		"target_id": targetID,
+		"message":   fmt.Sprintf("Successfully created nuclei target '%s'", req.Name),
+	})
+}
+
 // Register registers all attack surface routes
 func (h *AttackSurfaceHandlers) Register(app *pocketbase.PocketBase) {
 	fmt.Println("DEBUG: AttackSurfaceHandlers.Register() called")
@@ -1070,6 +1620,34 @@ func (h *AttackSurfaceHandlers) Register(app *pocketbase.PocketBase) {
 			fmt.Println("DEBUG: Port Stats endpoint called!")
 			return h.HandleGetPortStats(c)
 		})
+		e.Router.POST("/api/attack-surface/urls/scan", func(c echo.Context) error {
+			fmt.Println("DEBUG: URL Scan endpoint called!")
+			return h.HandleStartURLScan(c)
+		})
+		e.Router.GET("/api/attack-surface/urls/scan/:scan_id/progress", func(c echo.Context) error {
+			fmt.Println("DEBUG: URL Scan Progress endpoint called!")
+			return h.HandleGetURLScanProgress(c)
+		})
+		e.Router.GET("/api/attack-surface/urls", func(c echo.Context) error {
+			fmt.Println("DEBUG: URLs Get endpoint called!")
+			return h.HandleGetURLs(c)
+		})
+		e.Router.GET("/api/attack-surface/urls/scans", func(c echo.Context) error {
+			fmt.Println("DEBUG: URL Scans Get endpoint called!")
+			return h.HandleGetURLScans(c)
+		})
+		e.Router.GET("/api/attack-surface/urls/stats", func(c echo.Context) error {
+			fmt.Println("DEBUG: URL Stats endpoint called!")
+			return h.HandleGetURLStats(c)
+		})
+		e.Router.POST("/api/attack-surface/nuclei/collect-targets", func(c echo.Context) error {
+			fmt.Println("DEBUG: Nuclei Collect Targets endpoint called!")
+			return h.HandleCollectAttackSurfaceTargets(c)
+		})
+		e.Router.POST("/api/attack-surface/nuclei/create-target", func(c echo.Context) error {
+			fmt.Println("DEBUG: Nuclei Create Target endpoint called!")
+			return h.HandleCreateNucleiTargetFromAttackSurface(c)
+		})
 
 		fmt.Println("DEBUG: Attack surface routes registered successfully")
 		fmt.Println("DEBUG: GET /api/test-attack-surface -> simple test")
@@ -1087,6 +1665,8 @@ func (h *AttackSurfaceHandlers) Register(app *pocketbase.PocketBase) {
 		fmt.Println("DEBUG: GET /api/attack-surface/ports -> HandleGetPorts")
 		fmt.Println("DEBUG: GET /api/attack-surface/ports/scans -> HandleGetPortScans")
 		fmt.Println("DEBUG: GET /api/attack-surface/ports/stats -> HandleGetPortStats")
+		fmt.Println("DEBUG: POST /api/attack-surface/nuclei/collect-targets -> HandleCollectAttackSurfaceTargets")
+		fmt.Println("DEBUG: POST /api/attack-surface/nuclei/create-target -> HandleCreateNucleiTargetFromAttackSurface")
 
 		return nil
 	})

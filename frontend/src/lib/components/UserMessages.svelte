@@ -10,11 +10,25 @@
 
   async function fetchMessages() {
     try {
+      let filter = 'read = false';
+      
+      // Add user/admin specific filter (same as Navbar)
+      if ($pocketbase.authStore.isValid && $pocketbase.authStore.model?.id) {
+        if ($pocketbase.authStore.isAdmin) {
+          // For super admin, check admin_id field
+          filter += ` && admin_id = "${$pocketbase.authStore.model.id}"`;
+        } else {
+          // For regular users, check user field
+          filter += ` && user = "${$pocketbase.authStore.model.id}"`;
+        }
+      }
+
       const resultList = await $pocketbase.collection('user_messages').getList(1, 50, {
-        filter: 'read = false',
+        filter: filter,
         sort: '-created'
       });
       messages = resultList.items;
+      console.log('Fetched messages with filter:', filter, 'Count:', messages.length);
     } catch (error) {
       console.error('Error fetching messages:', error);
     }

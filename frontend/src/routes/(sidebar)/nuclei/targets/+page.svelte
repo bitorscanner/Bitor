@@ -3,6 +3,7 @@
     import { onMount } from 'svelte';
     import { pocketbase } from '@lib/stores/pocketbase';
     import TargetForm from './TargetForm.svelte';
+    import AttackSurfaceTargetForm from './AttackSurfaceTargetForm.svelte';
     import Delete from './Delete.svelte';
 	import MetaTag from '@utils/MetaTag.svelte';
     interface Target {
@@ -12,6 +13,7 @@
         count: number;
         clientName: string;
         client: string;
+        favicon?: string;
     }
 
     const path: string = '/targets';
@@ -27,6 +29,7 @@
     let showEditTargetModal = false; // Declare the variable
     let modalMode: 'add' | 'edit' = 'add'; // Declare and initialize modalMode
     let showTargetModal = false; // Add this line to declare the variable
+    let showAttackSurfaceModal = false;
 
     // Add PocketBase base URL
     const pbUrl = $pocketbase.baseUrl;
@@ -58,7 +61,7 @@
                     count: item.count || 0,
                     clientName: clientRecord?.name || 'N/A',
                     client: item.client,
-                    favicon: faviconUrl
+                    favicon: faviconUrl || undefined
                 };
             });
             console.log('Processed targets:', targets);
@@ -105,6 +108,15 @@
         currentTargetData = null;
         showTargetModal = true;
     }
+    
+    function openAttackSurfaceModal() {
+        showAttackSurfaceModal = true;
+    }
+    
+    function onAttackSurfaceSuccess() {
+        fetchTargets();
+    }
+    
     function openEditModal(target: Target) {
         console.log('Editing target:', target); // Add this line
         modalMode = 'edit';
@@ -124,7 +136,10 @@
         Targets
     </Heading>
 
-    <Button class="mt-4" on:click={() => openAddTargetModal()}>Add Target</Button>
+    <div class="mt-4 flex space-x-2">
+        <Button on:click={() => openAddTargetModal()}>Add Target</Button>
+        <Button color="purple" on:click={() => openAttackSurfaceModal()}>Create from Attack Surface</Button>
+    </div>
 
     <Table class="mt-4 border border-gray-200 dark:border-gray-700">
         <TableHead class="bg-gray-100 dark:bg-gray-700">
@@ -159,6 +174,10 @@
         target={currentTargetData}
         onSave={saveTarget}
         mode={modalMode}
+    />
+    <AttackSurfaceTargetForm
+        bind:open={showAttackSurfaceModal}
+        onSuccess={onAttackSurfaceSuccess}
     />
     <Delete bind:open={showDeleteTargetModal} onDelete={deleteTarget} />
 </main>
