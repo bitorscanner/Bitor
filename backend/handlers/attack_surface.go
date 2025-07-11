@@ -1549,6 +1549,31 @@ func (h *AttackSurfaceHandlers) HandleCreateNucleiTargetFromAttackSurface(c echo
 	})
 }
 
+// HandleGetActivePortScans retrieves all active port scans for a client
+func (h *AttackSurfaceHandlers) HandleGetActivePortScans(c echo.Context) error {
+	clientID := c.QueryParam("client_id")
+	if clientID == "" {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false,
+			"message": "Client ID is required",
+		})
+	}
+
+	activeScans, err := h.portScanSvc.GetActiveScansByClient(clientID)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"success": false,
+			"message": "Failed to get active scans",
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success":      true,
+		"active_scans": activeScans,
+		"total":        len(activeScans),
+	})
+}
+
 // Register registers all attack surface routes
 func (h *AttackSurfaceHandlers) Register(app *pocketbase.PocketBase) {
 	fmt.Println("DEBUG: AttackSurfaceHandlers.Register() called")
@@ -1648,6 +1673,10 @@ func (h *AttackSurfaceHandlers) Register(app *pocketbase.PocketBase) {
 			fmt.Println("DEBUG: Nuclei Create Target endpoint called!")
 			return h.HandleCreateNucleiTargetFromAttackSurface(c)
 		})
+		e.Router.GET("/api/attack-surface/ports/active-scans", func(c echo.Context) error {
+			fmt.Println("DEBUG: Active Port Scans endpoint called!")
+			return h.HandleGetActivePortScans(c)
+		})
 
 		fmt.Println("DEBUG: Attack surface routes registered successfully")
 		fmt.Println("DEBUG: GET /api/test-attack-surface -> simple test")
@@ -1667,6 +1696,7 @@ func (h *AttackSurfaceHandlers) Register(app *pocketbase.PocketBase) {
 		fmt.Println("DEBUG: GET /api/attack-surface/ports/stats -> HandleGetPortStats")
 		fmt.Println("DEBUG: POST /api/attack-surface/nuclei/collect-targets -> HandleCollectAttackSurfaceTargets")
 		fmt.Println("DEBUG: POST /api/attack-surface/nuclei/create-target -> HandleCreateNucleiTargetFromAttackSurface")
+		fmt.Println("DEBUG: GET /api/attack-surface/ports/active-scans -> HandleGetActivePortScans")
 
 		return nil
 	})

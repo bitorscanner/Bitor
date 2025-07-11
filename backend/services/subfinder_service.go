@@ -41,6 +41,14 @@ type SubfinderOutput struct {
 	Source string `json:"source"`
 }
 
+// SourceInfo represents information about a subfinder source
+type SourceInfo struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	RequiresKey bool   `json:"requires_key"`
+	Category    string `json:"category"`
+}
+
 // NewSubfinderService creates a new instance of SubfinderService
 func NewSubfinderService(app *pocketbase.PocketBase) *SubfinderService {
 	return &SubfinderService{
@@ -61,6 +69,114 @@ func (s *SubfinderService) RunSubfinder(ctx context.Context, domain, clientID st
 
 	s.logger.Printf("Starting subfinder scan for domain: %s", domain)
 
+	// Handle TLD-only scanning
+	if includeTLDs, ok := options["include_tlds"].(bool); ok && includeTLDs && domain == "tld-only-scan" {
+		s.logger.Printf("TLD-only scan requested, getting TLD domains for client: %s", clientID)
+		return s.runTLDScan(ctx, clientID, options, result, startTime)
+	}
+
+	// Regular domain scan
+	return s.runRegularScan(ctx, domain, options, result, startTime)
+}
+
+// runTLDScan handles scanning of discovered TLD domains
+func (s *SubfinderService) runTLDScan(ctx context.Context, clientID string, options map[string]interface{}, result *SubfinderResult, startTime time.Time) (*SubfinderResult, error) {
+	// Get TLD domains from database - these are domains discovered via TLD discovery
+	// Look for domains where the source indicates TLD discovery or where they are root domains
+	tldDomains, err := s.app.Dao().FindRecordsByFilter(
+		"attack_surface_domains",
+		"client = {:client} && (source ~ 'tld' || source ~ 'ms_tenant' || source = 'manual')",
+		"created",
+		0,
+		-1,
+		map[string]interface{}{
+			"client": clientID,
+		},
+	)
+	if err != nil {
+		result.Error = fmt.Sprintf("Failed to get TLD domains: %v", err)
+		result.EndTime = time.Now()
+		result.Duration = time.Since(startTime).String()
+		return result, err
+	}
+
+	if len(tldDomains) == 0 {
+		result.Error = "No TLD domains found. Please run TLD discovery first."
+		result.EndTime = time.Now()
+		result.Duration = time.Since(startTime).String()
+		return result, fmt.Errorf("no TLD domains found")
+	}
+
+	s.logger.Printf("Found %d TLD domains to scan", len(tldDomains))
+
+	// Collect unique domains to scan (avoid duplicates)
+	uniqueDomains := make(map[string]bool)
+	for _, tldRecord := range tldDomains {
+		domain := tldRecord.GetString("domain")
+		if domain != "" {
+			uniqueDomains[domain] = true
+		}
+	}
+
+	s.logger.Printf("Unique domains to scan: %v", getKeysFromMap(uniqueDomains))
+
+	// Collect all subdomains and sources from all TLD domains
+	var allSubdomains []string
+	sourcesMap := make(map[string]bool)
+
+	for domain := range uniqueDomains {
+		s.logger.Printf("Scanning TLD domain: %s", domain)
+
+		// Run subfinder for this TLD domain
+		tldResult, err := s.runRegularScan(ctx, domain, options, &SubfinderResult{
+			Domain:    domain,
+			StartTime: startTime,
+			ClientID:  clientID,
+		}, startTime)
+
+		if err != nil {
+			s.logger.Printf("Failed to scan TLD domain %s: %v", domain, err)
+			continue
+		}
+
+		// Collect results
+		allSubdomains = append(allSubdomains, tldResult.Subdomains...)
+		for _, source := range tldResult.Sources {
+			sourcesMap[source] = true
+		}
+	}
+
+	// Convert sources map to slice
+	var sources []string
+	for source := range sourcesMap {
+		sources = append(sources, source)
+	}
+
+	// Update result
+	result.Domain = fmt.Sprintf("TLD scan (%d domains)", len(uniqueDomains))
+	result.Subdomains = allSubdomains
+	result.TotalSubdomains = len(allSubdomains)
+	result.UniqueSubdomains = len(allSubdomains)
+	result.Sources = sources
+	result.EndTime = time.Now()
+	result.Duration = time.Since(startTime).String()
+
+	s.logger.Printf("TLD scan completed: %d subdomains found across %d TLD domains in %s", result.TotalSubdomains, len(uniqueDomains), result.Duration)
+
+	return result, nil
+}
+
+// getKeysFromMap is a helper function to get keys from a map for logging
+func getKeysFromMap(m map[string]bool) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+// runRegularScan handles normal domain scanning
+func (s *SubfinderService) runRegularScan(ctx context.Context, domain string, options map[string]interface{}, result *SubfinderResult, startTime time.Time) (*SubfinderResult, error) {
 	// Ensure subfinder is installed
 	if err := s.ensureSubfinderInstalled(); err != nil {
 		result.Error = fmt.Sprintf("Failed to ensure subfinder is installed: %v", err)
@@ -187,33 +303,49 @@ func (s *SubfinderService) buildSubfinderArgs(domain, outputFile string, options
 
 // parseSubfinderOutput parses subfinder JSON output
 func (s *SubfinderService) parseSubfinderOutput(outputFile string) ([]string, []string, error) {
+	s.logger.Printf("Parsing subfinder output from file: %s", outputFile)
+
 	file, err := os.Open(outputFile)
 	if err != nil {
+		s.logger.Printf("Failed to open output file: %v", err)
 		return nil, nil, err
 	}
 	defer file.Close()
 
+	// Check file size for debugging
+	if stat, err := file.Stat(); err == nil {
+		s.logger.Printf("Output file size: %d bytes", stat.Size())
+	}
+
 	var subdomains []string
 	sourcesMap := make(map[string]bool)
 	scanner := bufio.NewScanner(file)
+	lineCount := 0
 
 	for scanner.Scan() {
 		line := scanner.Text()
+		lineCount++
+
 		if strings.TrimSpace(line) == "" {
 			continue
 		}
 
+		s.logger.Printf("Processing line %d: %s", lineCount, line)
+
 		var subfinderResult SubfinderOutput
 		if err := json.Unmarshal([]byte(line), &subfinderResult); err != nil {
+			s.logger.Printf("Failed to parse JSON on line %d, trying as plain text: %v", lineCount, err)
 			// Try parsing as plain text (fallback)
 			if strings.TrimSpace(line) != "" {
 				subdomains = append(subdomains, strings.TrimSpace(line))
+				s.logger.Printf("Added plain text subdomain: %s", strings.TrimSpace(line))
 			}
 			continue
 		}
 
 		if subfinderResult.Host != "" {
 			subdomains = append(subdomains, subfinderResult.Host)
+			s.logger.Printf("Added JSON subdomain: %s from source: %s", subfinderResult.Host, subfinderResult.Source)
 			if subfinderResult.Source != "" {
 				sourcesMap[subfinderResult.Source] = true
 			}
@@ -221,6 +353,7 @@ func (s *SubfinderService) parseSubfinderOutput(outputFile string) ([]string, []
 	}
 
 	if err := scanner.Err(); err != nil {
+		s.logger.Printf("Scanner error: %v", err)
 		return nil, nil, err
 	}
 
@@ -230,7 +363,20 @@ func (s *SubfinderService) parseSubfinderOutput(outputFile string) ([]string, []
 		sources = append(sources, source)
 	}
 
+	s.logger.Printf("Parsing complete: found %d subdomains from %d sources", len(subdomains), len(sources))
+	if len(subdomains) > 0 {
+		s.logger.Printf("First few subdomains: %v", subdomains[:min(len(subdomains), 3)])
+	}
+
 	return subdomains, sources, nil
+}
+
+// min is a helper function since Go doesn't have a built-in min for ints
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // ensureSubfinderInstalled checks if subfinder is installed and installs it if needed
@@ -324,46 +470,45 @@ func (s *SubfinderService) GetSavedSubdomains(clientID, domain string) ([]*model
 	return records, nil
 }
 
-// GetAvailableSources returns the list of available subfinder sources
-func (s *SubfinderService) GetAvailableSources() []string {
-	// Default subfinder sources
-	return []string{
-		"alienvault",
-		"anubis",
-		"bevigil",
-		"binaryedge",
-		"bufferover",
-		"c99",
-		"censys",
-		"certspotter",
-		"chaos",
-		"chinaz",
-		"crtsh",
-		"dnsdb",
-		"dnsdumpster",
-		"dnsrepo",
-		"fofa",
-		"fullhunt",
-		"github",
-		"hackertarget",
-		"hunter",
-		"intelx",
-		"passivetotal",
-		"quake",
-		"rapiddns",
-		"reconcloud",
-		"riddler",
-		"robtex",
-		"securitytrails",
-		"shodan",
-		"spyse",
-		"sublist3r",
-		"threatbook",
-		"threatcrowd",
-		"threatminer",
-		"virustotal",
-		"waybackarchive",
-		"whoisxmlapi",
-		"zoomeye",
+// GetAvailableSources returns the list of available subfinder sources with metadata
+func (s *SubfinderService) GetAvailableSources() []SourceInfo {
+	return []SourceInfo{
+		{Name: "alienvault", Description: "AlienVault OTX", RequiresKey: true, Category: "Threat Intelligence"},
+		{Name: "anubis", Description: "Anubis", RequiresKey: false, Category: "Certificate Transparency"},
+		{Name: "bevigil", Description: "BeVigil", RequiresKey: true, Category: "Mobile App Intelligence"},
+		{Name: "binaryedge", Description: "BinaryEdge", RequiresKey: true, Category: "Internet Scanning"},
+		{Name: "bufferover", Description: "BufferOver", RequiresKey: false, Category: "DNS"},
+		{Name: "c99", Description: "C99.nl", RequiresKey: true, Category: "Subdomain Finder"},
+		{Name: "censys", Description: "Censys", RequiresKey: true, Category: "Internet Scanning"},
+		{Name: "certspotter", Description: "CertSpotter", RequiresKey: false, Category: "Certificate Transparency"},
+		{Name: "chaos", Description: "Chaos", RequiresKey: true, Category: "ProjectDiscovery"},
+		{Name: "chinaz", Description: "ChinaZ", RequiresKey: false, Category: "DNS"},
+		{Name: "crtsh", Description: "crt.sh", RequiresKey: false, Category: "Certificate Transparency"},
+		{Name: "dnsdb", Description: "Farsight DNSDB", RequiresKey: true, Category: "DNS Intelligence"},
+		{Name: "dnsdumpster", Description: "DNSDumpster", RequiresKey: false, Category: "DNS"},
+		{Name: "dnsrepo", Description: "DNS Repo", RequiresKey: false, Category: "DNS"},
+		{Name: "fofa", Description: "FOFA", RequiresKey: true, Category: "Internet Scanning"},
+		{Name: "fullhunt", Description: "FullHunt", RequiresKey: true, Category: "Attack Surface"},
+		{Name: "github", Description: "GitHub", RequiresKey: true, Category: "Code Repository"},
+		{Name: "hackertarget", Description: "HackerTarget", RequiresKey: false, Category: "Security Tools"},
+		{Name: "hunter", Description: "Hunter.io", RequiresKey: true, Category: "Email Finding"},
+		{Name: "intelx", Description: "Intelligence X", RequiresKey: true, Category: "Search Engine"},
+		{Name: "passivetotal", Description: "PassiveTotal", RequiresKey: true, Category: "Threat Intelligence"},
+		{Name: "quake", Description: "Quake", RequiresKey: true, Category: "Internet Scanning"},
+		{Name: "rapiddns", Description: "RapidDNS", RequiresKey: false, Category: "DNS"},
+		{Name: "reconcloud", Description: "ReconCloud", RequiresKey: false, Category: "Reconnaissance"},
+		{Name: "riddler", Description: "Riddler", RequiresKey: false, Category: "DNS"},
+		{Name: "robtex", Description: "Robtex", RequiresKey: false, Category: "DNS"},
+		{Name: "securitytrails", Description: "SecurityTrails", RequiresKey: true, Category: "DNS Intelligence"},
+		{Name: "shodan", Description: "Shodan", RequiresKey: true, Category: "Internet Scanning"},
+		{Name: "spyse", Description: "Spyse", RequiresKey: true, Category: "Internet Intelligence"},
+		{Name: "sublist3r", Description: "Sublist3r", RequiresKey: false, Category: "Subdomain Enumeration"},
+		{Name: "threatbook", Description: "ThreatBook", RequiresKey: true, Category: "Threat Intelligence"},
+		{Name: "threatcrowd", Description: "ThreatCrowd", RequiresKey: false, Category: "Threat Intelligence"},
+		{Name: "threatminer", Description: "ThreatMiner", RequiresKey: false, Category: "Threat Intelligence"},
+		{Name: "virustotal", Description: "VirusTotal", RequiresKey: true, Category: "Threat Intelligence"},
+		{Name: "waybackarchive", Description: "Wayback Machine", RequiresKey: false, Category: "Web Archive"},
+		{Name: "whoisxmlapi", Description: "WhoisXML API", RequiresKey: true, Category: "WHOIS/DNS"},
+		{Name: "zoomeye", Description: "ZoomEye", RequiresKey: true, Category: "Internet Scanning"},
 	}
 }

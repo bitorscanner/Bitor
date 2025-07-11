@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "scripts": {
     "dev": "vite dev",
-    "build": "node --max-old-space-size=8096 node_modules/vite/bin/vite.js build --mode production",
+    "build": "node --max-old-space-size=7645 node_modules/vite/bin/vite.js build --mode production",
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",

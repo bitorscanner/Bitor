@@ -409,4 +409,25 @@ export class PortScanService {
       { value: 'digitalocean', label: 'DigitalOcean', description: 'DigitalOcean Droplets' }
     ];
   }
+
+  /**
+   * Get active port scans for a client
+   */
+  async getActiveScans(clientId: string): Promise<{ success: boolean; active_scans: any[]; total: number; message?: string }> {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/attack-surface/ports/active-scans?client_id=${clientId}`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to get active scans:', error);
+      throw error;
+    }
+  }
 } 

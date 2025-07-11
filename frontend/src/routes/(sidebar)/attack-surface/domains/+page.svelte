@@ -56,9 +56,9 @@
 		
 		// For admin users, we need to handle differently
 		if ($pocketbase.authStore.isAdmin) {
-			// Admin users don't have a client - we might need to get a default client or handle this differently
-			console.log('DEBUG: User is admin - no client assigned');
-			clientId = ''; // Admins don't have a specific client
+			// Admin users don't have a client - they must select one from dropdown
+			console.log('DEBUG: User is admin - no client assigned, requires selection');
+			clientId = ''; // Admins don't have a specific client by default
 		} else {
 			// For regular users, the client should be in the client field or we need to use the user ID
 			clientId = $currentUser.client || $currentUser.id || '';
@@ -222,17 +222,18 @@
 		console.log('DEBUG: selectedClient:', selectedClient);
 		
 		// Validate inputs - domain is only required if not including TLD domains
-		if ((!newDomain.trim() && !includeTldDomains) || !selectedClient) {
-			console.log('DEBUG: Early return - missing domain or client selection');
-			if (!selectedClient) {
-				errorMessage = 'Please select a client to scan for';
-			}
-			if (!newDomain.trim() && !includeTldDomains) {
-				errorMessage = 'Please enter a domain to scan or enable TLD domain inclusion';
-			}
-			if (includeTldDomains && stats.tld_domains === 0) {
-				errorMessage = 'No TLD domains found. Please run TLD discovery first or enter a domain to scan.';
-			}
+		if (!selectedClient) {
+			errorMessage = 'Please select a client to scan for';
+			return;
+		}
+		
+		if (!newDomain.trim() && !includeTldDomains) {
+			errorMessage = 'Please enter a domain to scan or enable TLD domain inclusion';
+			return;
+		}
+		
+		if (includeTldDomains && stats.tld_domains === 0) {
+			errorMessage = 'No TLD domains found. Please run TLD discovery first or enter a domain to scan.';
 			return;
 		}
 
@@ -256,9 +257,13 @@
 				rate_limit: scanOptions.rate_limit,
 				recursive: scanOptions.recursive,
 				save_results: scanOptions.save_results,
-				include_tlds: includeTldDomains,
-				sources: sourcesArray.length > 0 ? sourcesArray : undefined
+				include_tlds: includeTldDomains
 			};
+
+			// Only add sources if we have some selected
+			if (sourcesArray.length > 0) {
+				requestBody.sources = sourcesArray;
+			}
 
 			console.log('DEBUG: Request body:', requestBody);
 
@@ -443,7 +448,7 @@
 							bind:value={selectedClient}
 							class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
 						>
-							<option value="">Select a client...</option>
+							<option value="">{$pocketbase.authStore.isAdmin ? 'Select a client...' : 'Select a client...'}</option>
 							{#each clients as client}
 								<option value={client.id}>{client.name || client.id}</option>
 							{/each}

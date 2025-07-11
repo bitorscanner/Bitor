@@ -59,6 +59,10 @@
 	let backgroundScanProgress = 0;
 	let showBackgroundProgress = false;
 
+	// Track scans per client to preserve progress when switching
+	let clientScanStates = new Map(); // Map<clientId, { activeScanId, backgroundScanProgress, showBackgroundProgress }>
+	let previousClientId = '';
+
 	// Computed values
 	$: filteredPorts = (ports || []).filter(port => {
 		const matchesSearch = !searchTerm || 
@@ -78,6 +82,7 @@
 		await loadClients();
 		if ($currentUser?.client) {
 			selectedClientId = $currentUser.client;
+			previousClientId = selectedClientId; // Initialize previous client ID
 			await loadData();
 		}
 	});
@@ -125,7 +130,8 @@
 			await Promise.all([
 				loadPorts(),
 				loadScans(),
-				loadStats()
+				loadStats(),
+				checkForActiveScans()
 			]);
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to load data';
@@ -146,11 +152,15 @@
 
 	// Load scan history
 	async function loadScans() {
+		console.log('Loading scans for client:', selectedClientId);
 		const response = await portScanService.getPortScans(selectedClientId);
+		console.log('Scan history response:', response);
 		if (response.success) {
 			scans = response.scans || [];
+			console.log('Loaded scans:', scans.length, scans);
 		} else {
 			scans = [];
+			console.log('Failed to load scans:', response);
 		}
 	}
 
@@ -162,6 +172,80 @@
 		} else {
 			stats = null;
 		}
+	}
+
+	// Check for active scans and resume progress tracking
+	async function checkForActiveScans() {
+		if (!selectedClientId) return;
+		
+		try {
+			const response = await portScanService.getActiveScans(selectedClientId);
+			if (response.success && response.active_scans && response.active_scans.length > 0) {
+				// Find the most recent running scan
+				const runningScan = response.active_scans.find(scan => scan.status === 'running');
+				
+				if (runningScan) {
+					console.log('Detected ongoing scan:', runningScan.scan_id);
+					// Resume progress tracking for this scan
+					activeScanId = runningScan.scan_id;
+					showBackgroundProgress = true;
+					backgroundScanProgress = runningScan.progress || 0;
+					
+					// Start polling for this scan
+					startProgressPolling(runningScan.scan_id);
+				}
+			}
+		} catch (err) {
+			console.error('Failed to check for active scans:', err);
+			// Don't show error to user - this is just a recovery attempt
+		}
+	}
+
+	// Extract progress polling into a separate function
+	function startProgressPolling(scanId: string) {
+		const progressInterval = setInterval(async () => {
+			try {
+				const progressResponse = await portScanService.getScanProgress(scanId);
+				if (progressResponse.success && progressResponse.progress) {
+					backgroundScanProgress = progressResponse.progress.progress;
+					
+					if (progressResponse.progress.status === 'completed') {
+						clearInterval(progressInterval);
+						showBackgroundProgress = false;
+						// Clean up scan state for this client
+						clientScanStates.delete(selectedClientId);
+						activeScanId = '';
+						await loadData(); // Refresh data
+						
+						// Show success notification
+						error = ''; // Clear any errors
+						console.log('Port scan completed successfully!');
+						
+					} else if (progressResponse.progress.status === 'failed') {
+						clearInterval(progressInterval);
+						showBackgroundProgress = false;
+						// Clean up scan state for this client
+						clientScanStates.delete(selectedClientId);
+						activeScanId = '';
+						error = progressResponse.progress.error || 'Port scan failed';
+					}
+				}
+			} catch (progressError) {
+				console.error('Failed to get progress:', progressError);
+			}
+		}, 2000); // Poll every 2 seconds
+
+		// Set a timeout to stop polling after 30 minutes
+		setTimeout(() => {
+			clearInterval(progressInterval);
+			if (showBackgroundProgress && activeScanId === scanId) {
+				showBackgroundProgress = false;
+				// Clean up scan state for this client on timeout
+				clientScanStates.delete(selectedClientId);
+				activeScanId = '';
+				error = 'Scan timed out';
+			}
+		}, 30 * 60 * 1000);
 	}
 
 	// Start port scan
@@ -225,41 +309,7 @@
 				isScanning = false;
 				
 				// Start background polling for progress
-				const progressInterval = setInterval(async () => {
-					try {
-						const progressResponse = await portScanService.getScanProgress(activeScanId);
-						if (progressResponse.success && progressResponse.progress) {
-							backgroundScanProgress = progressResponse.progress.progress;
-							
-							if (progressResponse.progress.status === 'completed') {
-								clearInterval(progressInterval);
-								showBackgroundProgress = false;
-								await loadData(); // Refresh data
-								
-								// Show success notification
-								error = ''; // Clear any errors
-								// You could add a toast notification here
-								console.log('Port scan completed successfully!');
-								
-							} else if (progressResponse.progress.status === 'failed') {
-								clearInterval(progressInterval);
-								showBackgroundProgress = false;
-								error = progressResponse.progress.error || 'Port scan failed';
-							}
-						}
-					} catch (progressError) {
-						console.error('Failed to get progress:', progressError);
-					}
-				}, 2000); // Poll every 2 seconds
-
-				// Set a timeout to stop polling after 30 minutes
-				setTimeout(() => {
-					clearInterval(progressInterval);
-					if (showBackgroundProgress) {
-						showBackgroundProgress = false;
-						error = 'Scan timed out';
-					}
-				}, 30 * 60 * 1000);
+				startProgressPolling(activeScanId);
 				
 			} else {
 				error = response.message || 'Failed to start port scan';
@@ -323,7 +373,38 @@
 	// Handle client selection change
 	async function handleClientChange() {
 		if (selectedClientId) {
+			// Save current scan state for the previous client
+			if (previousClientId && activeScanId && showBackgroundProgress) {
+				clientScanStates.set(previousClientId, {
+					activeScanId,
+					backgroundScanProgress,
+					showBackgroundProgress: true
+				});
+				console.log(`Saved scan state for client ${previousClientId}:`, clientScanStates.get(previousClientId));
+			}
+
+			// Clear current scan state
+			activeScanId = '';
+			backgroundScanProgress = 0;
+			showBackgroundProgress = false;
+
+			// Load data for new client
 			await loadData();
+			
+			// Restore scan state for new client if it exists
+			const savedState = clientScanStates.get(selectedClientId);
+			if (savedState && savedState.showBackgroundProgress) {
+				console.log(`Restoring scan state for client ${selectedClientId}:`, savedState);
+				activeScanId = savedState.activeScanId;
+				backgroundScanProgress = savedState.backgroundScanProgress;
+				showBackgroundProgress = true;
+				
+				// Resume polling for this client's scan
+				startProgressPolling(savedState.activeScanId);
+			}
+
+			// Update previous client ID for next change
+			previousClientId = selectedClientId;
 		}
 	}
 </script>
@@ -578,6 +659,111 @@
 											<span class="text-gray-400 text-base">
 												{new Date(port.discovered_at).toLocaleString()}
 											</span>
+										</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				{/if}
+			</div>
+		</div>
+	{/if}
+
+	<!-- Scan History Table -->
+	{#if activeTab === 'scans'}
+		<div class="w-full min-h-screen bg-white dark:bg-gray-900">
+			<div class="px-6 py-8">
+				<div class="flex justify-between items-center mb-6">
+					<h2 class="text-2xl font-bold text-gray-900 dark:text-white">Scan History</h2>
+					<div class="flex items-center gap-3">
+						<Button size="sm" color="alternative" on:click={async () => {
+							console.log('Manual scan reload triggered for client:', selectedClientId);
+							await loadScans();
+						}}>
+							Debug: Reload Scans
+						</Button>
+						<span class="text-sm text-gray-500 dark:text-gray-400">
+							{scans.length} scans
+						</span>
+					</div>
+				</div>
+
+				{#if loading}
+					<div class="flex justify-center py-12">
+						<Spinner size="8" />
+					</div>
+				{:else if scans.length === 0}
+					<div class="text-center py-12 text-gray-500">
+						No scan history found. Start a port scan to see results here.
+					</div>
+				{:else}
+					<!-- Scan History Table -->
+					<div class="w-full overflow-x-auto bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+						<table class="w-full text-base text-left text-gray-500 dark:text-gray-400">
+							<thead class="text-sm text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 border-b-2 border-gray-200 dark:border-gray-600">
+								<tr>
+									<th scope="col" class="px-6 py-4">Scan ID</th>
+									<th scope="col" class="px-6 py-4">Start Time</th>
+									<th scope="col" class="px-6 py-4">Duration</th>
+									<th scope="col" class="px-6 py-4">Targets</th>
+									<th scope="col" class="px-6 py-4">Open Ports</th>
+									<th scope="col" class="px-6 py-4">Mode</th>
+									<th scope="col" class="px-6 py-4">Status</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each scans as scan}
+									<tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
+										<td class="px-6 py-4">
+											<span class="font-mono text-sm text-gray-900 dark:text-white">
+												{scan.scan_id.replace('portscan_', '').substring(0, 12)}...
+											</span>
+										</td>
+										<td class="px-6 py-4">
+											<span class="text-gray-900 dark:text-white">
+												{new Date(scan.start_time).toLocaleString()}
+											</span>
+										</td>
+										<td class="px-6 py-4">
+											<span class="text-gray-900 dark:text-white">
+												{formatDuration(scan.duration)}
+											</span>
+										</td>
+										<td class="px-6 py-4">
+											<span class="text-gray-900 dark:text-white">
+												{scan.total_targets || 0}
+											</span>
+										</td>
+										<td class="px-6 py-4">
+											<div class="flex items-center gap-2">
+												<span class="text-lg font-semibold text-green-600 dark:text-green-400">
+													{scan.open_ports || 0}
+												</span>
+												<span class="text-sm text-gray-500">
+													/ {scan.total_ports || 0} checked
+												</span>
+											</div>
+										</td>
+										<td class="px-6 py-4">
+											<Badge color={getExecutionModeBadgeColor(scan.execution_mode)} class="text-sm px-3 py-1">
+												{scan.execution_mode}
+											</Badge>
+										</td>
+										<td class="px-6 py-4">
+											{#if scan.error}
+												<Badge color="red" class="text-sm px-3 py-1">
+													Failed
+												</Badge>
+											{:else if scan.end_time}
+												<Badge color="green" class="text-sm px-3 py-1">
+													Completed
+												</Badge>
+											{:else}
+												<Badge color="yellow" class="text-sm px-3 py-1">
+													Running
+												</Badge>
+											{/if}
 										</td>
 									</tr>
 								{/each}

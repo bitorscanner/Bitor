@@ -167,9 +167,18 @@ func (s *PortScanService) StartAsyncPortScan(req PortScanRequest) (string, error
 		s.updateScanProgress(scanID, 95, "Saving results...")
 		if err := s.SaveResults(result); err != nil {
 			s.logger.Printf("Failed to save port scan results for %s: %v", scanID, err)
+			// Mark as failed when save fails
+			s.mutex.Lock()
+			if progress, ok := s.activeScans[scanID]; ok {
+				progress.Status = "failed"
+				progress.Error = fmt.Sprintf("Failed to save results: %v", err)
+				progress.EndTime = &endTime
+			}
+			s.mutex.Unlock()
+			return
 		}
 
-		// Mark as completed
+		// Mark as completed only if save was successful
 		s.mutex.Lock()
 		if progress, ok := s.activeScans[scanID]; ok {
 			progress.Status = "completed"
@@ -815,12 +824,15 @@ func (s *PortScanService) estimatePortCount(ports, topPorts string) int {
 
 // SaveResults saves port scan results to the database
 func (s *PortScanService) SaveResults(result *PortScanJobResult) error {
+	s.logger.Printf("Starting to save port scan results: %d ports for scan %s", len(result.Results), result.ScanID)
+
 	// Save individual port scan results
-	for _, portResult := range result.Results {
+	savedPorts := 0
+	for i, portResult := range result.Results {
 		collection, err := s.app.Dao().FindCollectionByNameOrId("attack_surface_ports")
 		if err != nil {
 			s.logger.Printf("Failed to find attack_surface_ports collection: %v", err)
-			continue
+			return fmt.Errorf("failed to find attack_surface_ports collection: %v", err)
 		}
 
 		record := models.NewRecord(collection)
@@ -836,15 +848,19 @@ func (s *PortScanService) SaveResults(result *PortScanJobResult) error {
 		record.Set("discovered_at", result.StartTime.Format(time.RFC3339))
 
 		if err := s.app.Dao().SaveRecord(record); err != nil {
-			s.logger.Printf("Failed to save port result %s:%d: %v", portResult.IP, portResult.Port, err)
+			s.logger.Printf("Failed to save port result %s:%d (record %d): %v", portResult.IP, portResult.Port, i+1, err)
+			return fmt.Errorf("failed to save port result %s:%d: %v", portResult.IP, portResult.Port, err)
 		}
+		savedPorts++
 	}
+
+	s.logger.Printf("Successfully saved %d port results", savedPorts)
 
 	// Save scan job summary
 	collection, err := s.app.Dao().FindCollectionByNameOrId("attack_surface_port_scans")
 	if err != nil {
 		s.logger.Printf("Failed to find attack_surface_port_scans collection: %v", err)
-		return err
+		return fmt.Errorf("failed to find attack_surface_port_scans collection: %v", err)
 	}
 
 	record := models.NewRecord(collection)
@@ -870,9 +886,11 @@ func (s *PortScanService) SaveResults(result *PortScanJobResult) error {
 	record.Set("target_ips", string(targetsJSON))
 
 	if err := s.app.Dao().SaveRecord(record); err != nil {
+		s.logger.Printf("Failed to save scan summary: %v", err)
 		return fmt.Errorf("failed to save scan summary: %v", err)
 	}
 
+	s.logger.Printf("Successfully saved port scan summary for scan ID: %s", result.ScanID)
 	s.logger.Printf("Saved port scan results: %d ports, scan ID: %s", len(result.Results), result.ScanID)
 	return nil
 }
@@ -902,4 +920,21 @@ func (s *PortScanService) ensureNaabuInstalled() error {
 	}
 
 	return nil
+}
+
+// GetActiveScansByClient returns all running or recent scans for a client
+func (s *PortScanService) GetActiveScansByClient(clientID string) ([]*ScanProgress, error) {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+
+	var activeScans []*ScanProgress
+	for _, progress := range s.activeScans {
+		if progress.ClientID == clientID {
+			// Return a copy to avoid race conditions
+			progressCopy := *progress
+			activeScans = append(activeScans, &progressCopy)
+		}
+	}
+
+	return activeScans, nil
 }

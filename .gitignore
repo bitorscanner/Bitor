@@ -238,3 +238,4 @@ pb_data/*
 
 .gitlab-ci.yml
 .cursorrules
+fix_author.sh
