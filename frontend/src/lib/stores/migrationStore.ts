@@ -1,4 +1,4 @@
-import { writable } from 'svelte/store';
+import { writable } from "svelte/store";
 
 export interface MigrationState {
   isProcessing: boolean;
@@ -14,12 +14,12 @@ const initialState: MigrationState = {
   totalCount: 0,
   processedCount: 0,
   progress: 0,
-  error: '',
-  currentStatus: ''
+  error: "",
+  currentStatus: "",
 };
 
 export const migrationStore = writable<MigrationState>(initialState);
 
 export const resetMigrationStore = () => {
   migrationStore.set(initialState);
-}; 
+};

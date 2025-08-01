@@ -9,7 +9,9 @@
   max-height: none !important;
   height: auto !important;
   overflow: visible !important;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
   background: white !important;
   border: 1px solid #e5e7eb !important;
   border-radius: 0.5rem !important;
@@ -22,4 +24,4 @@
   overflow-x: hidden !important;
   background: white !important;
   border-radius: 0.5rem !important;
-} 
+}

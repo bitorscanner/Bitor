@@ -16,8 +16,8 @@ The backend API now supports filtering findings by the `created_by` field. When 
 1. Import the components and utilities in `+page.svelte`:
 
 ```js
-import MyFindingsFilter from './MyFindingsFilter.svelte';
-import { addUserFilter, updateCacheKey } from './myFindings';
+import MyFindingsFilter from "./MyFindingsFilter.svelte";
+import { addUserFilter, updateCacheKey } from "./myFindings";
 ```
 
 2. Add a state variable for the filter:
@@ -34,8 +34,8 @@ let showMyFindingsOnly = false;
   <!-- Other filters -->
 
   <!-- My Findings Filter -->
-  <MyFindingsFilter 
-    bind:checked={showMyFindingsOnly} 
+  <MyFindingsFilter
+    bind:checked={showMyFindingsOnly}
     on:change={({ detail }) => {
       showMyFindingsOnly = detail.checked;
       applyFilters();
@@ -54,7 +54,11 @@ const params = new URLSearchParams();
 // Add other parameters...
 
 // Add user filter
-addUserFilter(params, showMyFindingsOnly, $pocketbase.authStore.model?.id ?? '');
+addUserFilter(
+  params,
+  showMyFindingsOnly,
+  $pocketbase.authStore.model?.id ?? "",
+);
 
 // Make the API request
 const response = await fetch(
@@ -62,9 +66,9 @@ const response = await fetch(
   {
     headers: {
       Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    }
-  }
+      "Content-Type": "application/json",
+    },
+  },
 );
 ```
 
@@ -79,4 +83,4 @@ const cacheKey = updateCacheKey(baseKey, showMyFindingsOnly);
 ## Notes
 
 - The `created_by` field must be populated in the findings records for this filter to work correctly.
-- The backend API has been updated to support this filtering. If you encounter issues, ensure the backend is properly handling the `created_by` parameter. 
+- The backend API has been updated to support this filtering. If you encounter issues, ensure the backend is properly handling the `created_by` parameter.

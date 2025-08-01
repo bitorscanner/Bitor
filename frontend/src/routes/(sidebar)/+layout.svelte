@@ -6,7 +6,6 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { pocketbase } from '@lib/stores/pocketbase';
-	import { page } from '$app/stores';
 
 	let drawerHidden = false;
 
@@ -17,9 +16,6 @@
 			goto('/authentication/sign-in');
 		}
 	});
-
-	// Determine if the current page is an authentication page
-	const isAuthPage = $page.url.pathname.startsWith('/authentication');
 </script>
 
 <div class="min-h-screen bg-gray-50 dark:bg-gray-900">

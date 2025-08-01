@@ -1,7 +1,10 @@
-import { pocketbase } from '@lib/stores/pocketbase';
-import { get } from 'svelte/store';
+import { pocketbase } from "@lib/stores/pocketbase";
+import { get } from "svelte/store";
 
-export async function getFavicon(url: string, clientId?: string): Promise<string | null> {
+export async function getFavicon(
+  url: string,
+  clientId?: string,
+): Promise<string | null> {
   try {
     console.log("Getting favicon for URL:", url);
     // Remove protocol and get domain
@@ -10,13 +13,16 @@ export async function getFavicon(url: string, clientId?: string): Promise<string
 
     if (clientId) {
       // Use the fetch-favicon endpoint to save the favicon
-      const token = get(pocketbase).authStore.token;  // Get the auth token from the pocketbase client
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/clients/${clientId}/fetch-favicon`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const token = get(pocketbase).authStore.token; // Get the auth token from the pocketbase client
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/api/clients/${clientId}/fetch-favicon`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
 
       if (!response.ok) {
         console.error("Failed to fetch favicon:", response.statusText);

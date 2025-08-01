@@ -1,11 +1,7 @@
 <script lang="ts">
-	import { Card, Frame, type LinkType } from 'flowbite-svelte';
+	import { Frame, type LinkType } from 'flowbite-svelte';
 	import {
-		DiscordSolid,
-		DribbbleSolid,
-		FacebookSolid,
-		GithubSolid,
-		TwitterSolid
+		GithubSolid
 	} from 'flowbite-svelte-icons';
 	import type { ComponentType } from 'svelte';
 

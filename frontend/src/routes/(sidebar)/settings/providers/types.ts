@@ -30,7 +30,7 @@ export interface EmailSettings {
   smtp_host: string;
   smtp_port: number;
   from_address: string;
-  encryption: 'none' | 'tls' | 'starttls';
+  encryption: "none" | "tls" | "starttls";
 }
 
 export interface WebhookSettings {
@@ -55,35 +55,35 @@ export interface JiraSettings {
   client_mappings: JiraClientMapping[];
 }
 
-export type ProviderSettings = 
-  | DigitalOceanSettings 
-  | AWSSettings 
-  | S3Settings 
-  | EmailSettings 
-  | WebhookSettings 
+export type ProviderSettings =
+  | DigitalOceanSettings
+  | AWSSettings
+  | S3Settings
+  | EmailSettings
+  | WebhookSettings
   | TelegramSettings
   | JiraSettings
   | TailscaleSettings;
 
-export type AIProviderType = 
-  | 'openai'
-  | 'anthropic'
-  | 'google'
-  | 'mistral'
-  | 'ollama'
-  | 'cohere';
+export type AIProviderType =
+  | "openai"
+  | "anthropic"
+  | "google"
+  | "mistral"
+  | "ollama"
+  | "cohere";
 
-export type ProviderType = 
-  | 'aws' 
-  | 'digitalocean' 
-  | 's3' 
-  | 'email' 
-  | 'slack' 
-  | 'teams' 
-  | 'discord' 
-  | 'telegram'
-  | 'jira'
-  | 'tailscale'
+export type ProviderType =
+  | "aws"
+  | "digitalocean"
+  | "s3"
+  | "email"
+  | "slack"
+  | "teams"
+  | "discord"
+  | "telegram"
+  | "jira"
+  | "tailscale"
   | AIProviderType
   | DiscoveryServiceType;
 
@@ -107,20 +107,20 @@ export interface ApiKey {
 
 export type UseType = string;
 
-export type DiscoveryServiceType = 
-  | 'alienvault'
-  | 'binaryedge'
-  | 'bufferover'
-  | 'censys'
-  | 'certspotter'
-  | 'chaos'
-  | 'github'
-  | 'intelx'
-  | 'passivetotal'
-  | 'securitytrails'
-  | 'shodan'
-  | 'virustotal'
-  | 'whoisxml';
+export type DiscoveryServiceType =
+  | "alienvault"
+  | "binaryedge"
+  | "bufferover"
+  | "censys"
+  | "certspotter"
+  | "chaos"
+  | "github"
+  | "intelx"
+  | "passivetotal"
+  | "securitytrails"
+  | "shodan"
+  | "virustotal"
+  | "whoisxml";
 
 export interface DiscoveryService {
   id?: string;
@@ -128,7 +128,7 @@ export interface DiscoveryService {
   service_type: DiscoveryServiceType;
   api_key: string;
   enabled: boolean;
-  status?: 'active' | 'inactive' | 'error';
+  status?: "active" | "inactive" | "error";
   last_tested?: string;
   created?: string;
   updated?: string;
@@ -136,82 +136,83 @@ export interface DiscoveryService {
 
 export const DISCOVERY_SERVICES = {
   alienvault: {
-    name: 'AlienVault',
-    description: 'Threat intelligence platform providing insights into potential security threats'
+    name: "AlienVault",
+    description:
+      "Threat intelligence platform providing insights into potential security threats",
   },
   binaryedge: {
-    name: 'BinaryEdge',
-    description: 'Internet security scanning platform'
+    name: "BinaryEdge",
+    description: "Internet security scanning platform",
   },
   bufferover: {
-    name: 'BufferOver',
-    description: 'DNS data and subdomain enumeration'
+    name: "BufferOver",
+    description: "DNS data and subdomain enumeration",
   },
   censys: {
-    name: 'Censys',
-    description: 'Internet security and attack surface management platform'
+    name: "Censys",
+    description: "Internet security and attack surface management platform",
   },
   certspotter: {
-    name: 'CertSpotter',
-    description: 'SSL/TLS certificate monitoring'
+    name: "CertSpotter",
+    description: "SSL/TLS certificate monitoring",
   },
   chaos: {
-    name: 'Chaos',
-    description: 'Project Discovery\'s Chaos dataset API'
+    name: "Chaos",
+    description: "Project Discovery's Chaos dataset API",
   },
   github: {
-    name: 'GitHub',
-    description: 'Source code and repository scanning'
+    name: "GitHub",
+    description: "Source code and repository scanning",
   },
   intelx: {
-    name: 'IntelX',
-    description: 'Intelligence data search platform'
+    name: "IntelX",
+    description: "Intelligence data search platform",
   },
   passivetotal: {
-    name: 'PassiveTotal',
-    description: 'RiskIQ\'s threat intelligence platform'
+    name: "PassiveTotal",
+    description: "RiskIQ's threat intelligence platform",
   },
   securitytrails: {
-    name: 'SecurityTrails',
-    description: 'Security intelligence data platform'
+    name: "SecurityTrails",
+    description: "Security intelligence data platform",
   },
   shodan: {
-    name: 'Shodan',
-    description: 'Internet-connected device search engine'
+    name: "Shodan",
+    description: "Internet-connected device search engine",
   },
   virustotal: {
-    name: 'VirusTotal',
-    description: 'File and URL analysis platform'
+    name: "VirusTotal",
+    description: "File and URL analysis platform",
   },
   whoisxml: {
-    name: 'WhoisXML API',
-    description: 'IP netblocks and WHOIS intelligence platform'
-  }
+    name: "WhoisXML API",
+    description: "IP netblocks and WHOIS intelligence platform",
+  },
 } as const;
 
 export const AI_SERVICES = {
   openai: {
-    name: 'OpenAI',
-    description: 'GPT-4, GPT-3.5 and other OpenAI models'
+    name: "OpenAI",
+    description: "GPT-4, GPT-3.5 and other OpenAI models",
   },
   anthropic: {
-    name: 'Anthropic',
-    description: 'Claude and other Anthropic models'
+    name: "Anthropic",
+    description: "Claude and other Anthropic models",
   },
   google: {
-    name: 'Google AI',
-    description: 'Gemini and other Google AI models'
+    name: "Google AI",
+    description: "Gemini and other Google AI models",
   },
   mistral: {
-    name: 'Mistral AI',
-    description: 'Mistral large language models'
+    name: "Mistral AI",
+    description: "Mistral large language models",
   },
   ollama: {
-    name: 'Ollama',
-    description: 'Self-hosted open source models'
+    name: "Ollama",
+    description: "Self-hosted open source models",
   },
   cohere: {
-    name: 'Cohere',
-    description: 'Cohere language models'
-  }
+    name: "Cohere",
+    description: "Cohere language models",
+  },
 } as const;

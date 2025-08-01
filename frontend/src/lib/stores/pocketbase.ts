@@ -4,7 +4,7 @@ import { goto } from "$app/navigation";
 import type { Permission } from "$lib/types/permission";
 
 // set backend url based on environment
-export const backendUrl = import.meta.env.DEV ? "http://127.0.0.1:8090/" : "/";
+export const backendUrl = import.meta.env.VITE_API_BASE_URL || "/";
 
 // connect to backend
 const pb = new PocketBase(backendUrl);

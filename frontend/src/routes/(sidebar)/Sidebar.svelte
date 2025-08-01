@@ -15,22 +15,14 @@
 	import {
 		AngleDownOutline,
 		AngleUpOutline,
-		ClipboardListSolid,
 		CogOutline,
-		FileChartBarSolid,
 		GithubSolid,
-		LayersSolid,
 		LifeSaverSolid,
-		LockSolid,
-		WandMagicSparklesOutline,
 		ChartPieOutline,
-		RectangleListSolid,
 		ArrowRightAltSolid,
-		TableColumnSolid,
 		ProfileCardSolid,
 		SearchSolid,
 		InboxFullSolid,
-		CalendarMonthSolid,
 		UserCircleSolid,
 		UsersGroupSolid,
 		BellSolid,
@@ -60,7 +52,6 @@
 	let groupClass = 'pt-2 space-y-2';
 
 	$: mainSidebarUrl = $page.url.pathname;
-	let activeMainSidebar: string;
 
 	// Initialize dropdowns state
 	let dropdowns: { [key: string]: boolean } = {};
@@ -73,15 +64,11 @@
 		}
 	}
 
-	afterNavigate((navigation) => {
+	afterNavigate(() => {
 		// this fixes https://github.com/themesberg/flowbite-svelte/issues/364
 		document.getElementById('svelte')?.scrollTo({ top: 0 });
 		closeDrawer();
-
-		activeMainSidebar = navigation.to?.url.pathname ?? '';
 	});
-
-	$: isAdmin = $pocketbase?.authStore?.isAdmin || $currentUser?.group?.name === 'admin';
 
 	$: posts = [
 		{ name: 'Dashboard', icon: ChartPieOutline, href: '/dashboard' },

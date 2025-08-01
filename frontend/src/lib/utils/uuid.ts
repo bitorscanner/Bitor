@@ -4,11 +4,14 @@
  */
 export function generateUUID(): string {
   // Try to use the native crypto.randomUUID() if available
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
     try {
       return crypto.randomUUID();
     } catch (error) {
-      console.warn('crypto.randomUUID() failed, falling back to polyfill:', error);
+      console.warn(
+        "crypto.randomUUID() failed, falling back to polyfill:",
+        error,
+      );
     }
   }
 
@@ -20,12 +23,12 @@ export function generateUUID(): string {
  * Polyfill implementation of UUID v4 generation
  */
 function uuidv4Polyfill(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
 }
 
 // Alias for backwards compatibility
-export const randomUUID = generateUUID; 
+export const randomUUID = generateUUID;

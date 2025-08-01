@@ -2,20 +2,14 @@
 	import UserMenu from '../utils/widgets/UserMenu.svelte';
 	import {
 		DarkMode,
-		Dropdown,
-		DropdownItem,
 		NavBrand,
 		NavHamburger,
-		NavLi,
-		NavUl,
 		Navbar,
-		Search,
 		Button
 	} from 'flowbite-svelte';
-	import { ChevronDownOutline } from 'flowbite-svelte-icons';
 	import '../../app.pcss';
 	import { pocketbase } from '@lib/stores/pocketbase'; // Import the pocketbase store
-	import { onMount, onDestroy } from 'svelte'; // Import onMount and onDestroy
+	import { onMount } from 'svelte';
 	import UserMessages from '$lib/components/UserMessages.svelte';
 	import { writable } from 'svelte/store';
 
@@ -88,7 +82,7 @@
 	});
 </script>
 
-<Navbar {fluid} class="text-black" color="default" let:NavContainer>
+<Navbar {fluid} class="text-black" color="default">
 	<NavHamburger
 		onClick={() => (drawerHidden = !drawerHidden)}
 		class="m-0 me-3 md:block lg:hidden"
