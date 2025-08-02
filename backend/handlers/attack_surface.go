@@ -11,7 +11,7 @@ import (
 
 	"bitor/services"
 
-	"github.com/labstack/echo/v5"
+	echo "github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
 )

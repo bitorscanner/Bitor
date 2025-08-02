@@ -1,6 +1,6 @@
 import { pocketbase } from "$lib/stores/pocketbase";
 import { get } from "svelte/store";
-import type { ScanProgress } from '@lib/types/common';
+import type { ScanProgress } from "@lib/types/common";
 
 export interface PortScanRequest {
   client_id: string;

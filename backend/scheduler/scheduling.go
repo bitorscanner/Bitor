@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/pocketbase/pocketbase"
-	"github.com/robfig/cron/v3"
+	cron "github.com/robfig/cron/v3"
 
 	pbModels "github.com/pocketbase/pocketbase/models"
 

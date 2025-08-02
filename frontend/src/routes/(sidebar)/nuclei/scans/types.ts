@@ -35,7 +35,7 @@ export interface ScanData {
   };
   ansible_logs?: Array<{
     timestamp: string;
-    level: 'info' | 'warning' | 'error' | 'debug';
+    level: "info" | "warning" | "error" | "debug";
     message: string;
     task?: string;
   }>;

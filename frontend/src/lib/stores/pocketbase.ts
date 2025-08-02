@@ -11,7 +11,7 @@ const pb = new PocketBase(backendUrl);
 pb.autoCancellation(false);
 
 // Add response interceptor for auth-related errors
-import type { PocketBaseOptions } from '@lib/types/common';
+import type { PocketBaseOptions } from "@lib/types/common";
 
 pb.beforeSend = function (url: string, options: PocketBaseOptions) {
   const originalResponse = options.fetch || fetch;

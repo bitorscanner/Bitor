@@ -18,7 +18,7 @@ export interface ApiResponse<T = unknown> {
 // Progress types
 export interface ScanProgress {
   percentage: number;
-  status: 'running' | 'completed' | 'failed' | 'pending';
+  status: "running" | "completed" | "failed" | "pending";
   currentTarget?: string;
   totalTargets?: number;
   completedTargets?: number;
@@ -32,7 +32,7 @@ export interface UserMessage {
   userId: string;
   title: string;
   content: string;
-  type: 'info' | 'warning' | 'error' | 'success';
+  type: "info" | "warning" | "error" | "success";
   read: boolean;
   created: string;
   updated: string;
@@ -42,7 +42,7 @@ export interface UserMessage {
 
 // Settings types
 export interface AppSettings {
-  theme?: 'light' | 'dark' | 'auto';
+  theme?: "light" | "dark" | "auto";
   notifications?: boolean;
   autoRefresh?: boolean;
   refreshInterval?: number;

@@ -2,6 +2,7 @@ package services
 
 import (
 	"bitor/types"
+	"bitor/utils"
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
@@ -18,6 +19,16 @@ type JiraService struct {
 	client *http.Client
 }
 
+// validateAndSanitizeJiraURL validates the Jira URL and returns a sanitized version
+// This prevents SSRF attacks by ensuring the URL is safe to make requests to
+func (s *JiraService) validateAndSanitizeJiraURL(rawURL string) (string, error) {
+	sanitizedURL, err := utils.SanitizeJiraURL(rawURL)
+	if err != nil {
+		return "", fmt.Errorf("invalid Jira URL: %v", err)
+	}
+	return sanitizedURL, nil
+}
+
 // NewJiraService creates a new JiraService instance
 func NewJiraService() *JiraService {
 	return &JiraService{
@@ -27,6 +38,12 @@ func NewJiraService() *JiraService {
 
 // CreateJiraTicket creates a new ticket in Jira
 func (s *JiraService) CreateJiraTicket(settings types.JiraSettings, clientID string, title string, description string) error {
+	// Validate and sanitize the Jira URL to prevent SSRF attacks
+	baseURL, err := s.validateAndSanitizeJiraURL(settings.JiraURL)
+	if err != nil {
+		return fmt.Errorf("security validation failed: %v", err)
+	}
+
 	// Get the organization ID for the client
 	var organizationID string
 	for _, mapping := range settings.ClientMappings {
@@ -64,7 +81,7 @@ func (s *JiraService) CreateJiraTicket(settings types.JiraSettings, clientID str
 	// Create HTTP request
 	req, err := http.NewRequest(
 		"POST",
-		fmt.Sprintf("%s/rest/api/2/issue", settings.JiraURL),
+		fmt.Sprintf("%s/rest/api/2/issue", baseURL),
 		bytes.NewBuffer(jsonPayload),
 	)
 	if err != nil {
@@ -112,8 +129,14 @@ type JiraIssueType struct {
 }
 
 func (s *JiraService) GetProjects(settings types.JiraSettings) ([]JiraProject, error) {
+	// Validate and sanitize the Jira URL to prevent SSRF attacks
+	baseURL, err := s.validateAndSanitizeJiraURL(settings.JiraURL)
+	if err != nil {
+		return nil, fmt.Errorf("security validation failed: %v", err)
+	}
+
 	// Build the API URL for fetching projects
-	apiURL := fmt.Sprintf("%s/rest/api/3/project", settings.JiraURL)
+	apiURL := fmt.Sprintf("%s/rest/api/3/project", baseURL)
 
 	// Create the request
 	req, err := http.NewRequest("GET", apiURL, nil)
@@ -150,8 +173,14 @@ func (s *JiraService) GetProjects(settings types.JiraSettings) ([]JiraProject, e
 }
 
 func (s *JiraService) GetIssueTypes(settings types.JiraSettings, projectKey string) ([]JiraIssueType, error) {
+	// Validate and sanitize the Jira URL to prevent SSRF attacks
+	baseURL, err := s.validateAndSanitizeJiraURL(settings.JiraURL)
+	if err != nil {
+		return nil, fmt.Errorf("security validation failed: %v", err)
+	}
+
 	// Build the API URL for fetching issue types
-	apiURL := fmt.Sprintf("%s/rest/api/3/project/%s", settings.JiraURL, projectKey)
+	apiURL := fmt.Sprintf("%s/rest/api/3/project/%s", baseURL, projectKey)
 
 	// Create the request
 	req, err := http.NewRequest("GET", apiURL, nil)
@@ -195,8 +224,14 @@ type JiraOrganization struct {
 }
 
 func (s *JiraService) GetOrganizations(settings types.JiraSettings, projectKey string) ([]JiraOrganization, error) {
+	// Validate and sanitize the Jira URL to prevent SSRF attacks
+	baseURL, err := s.validateAndSanitizeJiraURL(settings.JiraURL)
+	if err != nil {
+		return nil, fmt.Errorf("security validation failed: %v", err)
+	}
+
 	// Use the Service Desk API to get organizations
-	apiURL := fmt.Sprintf("%s/rest/servicedeskapi/organization", settings.JiraURL)
+	apiURL := fmt.Sprintf("%s/rest/servicedeskapi/organization", baseURL)
 
 	// Create the request
 	req, err := http.NewRequest("GET", apiURL, nil)
@@ -346,6 +381,12 @@ For more details on this automation, see {{jira_link}}`
 
 // SendTestNotification creates a test issue in Jira
 func (s *JiraService) SendTestNotification(settings types.JiraSettings) error {
+	// Validate and sanitize the Jira URL to prevent SSRF attacks
+	baseURL, err := s.validateAndSanitizeJiraURL(settings.JiraURL)
+	if err != nil {
+		return fmt.Errorf("security validation failed: %v", err)
+	}
+
 	// First, fetch available organizations to validate the ID
 	orgs, err := s.GetOrganizations(settings, settings.ProjectKey)
 	if err != nil {
@@ -359,7 +400,7 @@ func (s *JiraService) SendTestNotification(settings types.JiraSettings) error {
 		"start_time":    time.Now().Format(time.RFC3339),
 		"client_name":   "Test Client",
 		"total_targets": "5",
-		"jira_link":     fmt.Sprintf("%s/browse/%s", settings.JiraURL, settings.ProjectKey),
+		"jira_link":     fmt.Sprintf("%s/browse/%s", baseURL, settings.ProjectKey),
 	}
 
 	// Initialize description variable with template
@@ -423,7 +464,7 @@ func (s *JiraService) SendTestNotification(settings types.JiraSettings) error {
 	}
 
 	// Create HTTP request
-	apiURL := fmt.Sprintf("%s/rest/api/2/issue", settings.JiraURL)
+	apiURL := fmt.Sprintf("%s/rest/api/2/issue", baseURL)
 	req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(jsonPayload))
 	if err != nil {
 		return fmt.Errorf("error creating request: %v", err)
