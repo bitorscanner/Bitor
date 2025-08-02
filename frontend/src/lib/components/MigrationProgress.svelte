@@ -51,11 +51,12 @@
         await new Promise(resolve => setTimeout(resolve, 500)); // Check every 500ms during counting
         await checkMigrationStatus();
       }
-    } catch (err: any) {
-      console.error('Error checking migration status:', err);
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.error('Error checking migration status:', error);
       migrationStore.update((s: MigrationState) => ({
         ...s,
-        error: err?.message || 'Failed to check migration status',
+        error: error?.message || 'Failed to check migration status',
         isProcessing: false
       }));
     }
@@ -73,11 +74,12 @@
         }
       });
       return result.processedCount;
-    } catch (err: any) {
-      console.error('Batch processing error:', err);
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.error('Batch processing error:', error);
       migrationStore.update((s: MigrationState) => ({
         ...s,
-        error: err.message || 'Unknown error occurred',
+        error: error.message || 'Unknown error occurred',
         currentStatus: `Error processing batch ${offset}-${offset + limit}, continuing...`
       }));
       return 0;
@@ -121,11 +123,12 @@
       // Let the polling handle the rest
       await checkMigrationStatus();
 
-    } catch (err: any) {
-      console.error('Migration error:', err);
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.error('Migration error:', error);
       migrationStore.update((s: MigrationState) => ({
         ...s,
-        error: err.message || 'Failed to start migration',
+        error: error.message || 'Failed to start migration',
         isProcessing: false
       }));
     }

@@ -418,7 +418,7 @@ func HandleVulnerabilitiesByClient(app *pocketbase.PocketBase) echo.HandlerFunc 
 		// Check for admin authentication
 		admin, _ := c.Get(apis.ContextAdminKey).(*models.Admin)
 		user, _ := c.Get(apis.ContextAuthRecordKey).(*models.Record)
-		
+
 		// For regular users (non-admin), always filter by their user ID
 		if admin == nil && user != nil {
 			conditions["created_by"] = user.Id
@@ -545,7 +545,7 @@ func HandleRecentFindings(app *pocketbase.PocketBase) echo.HandlerFunc {
 		// Check for admin authentication
 		admin, _ := c.Get(apis.ContextAdminKey).(*models.Admin)
 		user, _ := c.Get(apis.ContextAuthRecordKey).(*models.Record)
-		
+
 		// Require either admin or user authentication
 		if admin == nil && user == nil {
 			return c.JSON(http.StatusUnauthorized, map[string]interface{}{

@@ -1,0 +1,14 @@
+# Build outputs
+.svelte-kit/
+build/
+dist/
+
+# Package manager
+node_modules/
+
+# Generated files
+pnpm-lock.yaml
+package-lock.json
+
+# Other
+.DS_Store

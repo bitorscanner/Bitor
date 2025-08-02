@@ -1,5 +1,6 @@
 import { pocketbase } from "$lib/stores/pocketbase";
 import { get } from "svelte/store";
+import type { ScanProgress } from '@lib/types/common';
 
 export interface PortScanRequest {
   client_id: string;
@@ -233,7 +234,7 @@ export class PortScanService {
    */
   async getScanProgress(
     scanId: string,
-  ): Promise<{ success: boolean; progress?: any; message?: string }> {
+  ): Promise<{ success: boolean; progress?: ScanProgress; message?: string }> {
     try {
       const response = await fetch(
         `${import.meta.env.VITE_API_BASE_URL}/api/attack-surface/ports/scan/${scanId}/progress`,
@@ -533,7 +534,13 @@ export class PortScanService {
    */
   async getActiveScans(clientId: string): Promise<{
     success: boolean;
-    active_scans: any[];
+    active_scans: Array<{
+      id: string;
+      status: string;
+      progress?: number;
+      client_id: string;
+      created: string;
+    }>;
     total: number;
     message?: string;
   }> {

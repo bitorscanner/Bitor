@@ -161,7 +161,7 @@
     switch (frequency) {
       case 'daily':
         return '0 0 * * *';
-      case 'weekly':
+      case 'weekly': {
         if (!selectedDays || selectedDays.length === 0) {
           // Default to Monday if no days selected
           selectedDays = ['monday'];
@@ -180,7 +180,8 @@
           .filter(day => day !== undefined)
           .join(',');
         return `0 0 * * ${days}`;
-      case 'monthly':
+      }
+      case 'monthly': {
         if (monthlyType === 'date') {
           return `0 0 ${monthlyDate || 1} * *`;
         } else {
@@ -202,6 +203,7 @@
           }[monthlyDay] || '1';
           return `0 0 * * ${day}#${week}`;
         }
+      }
       default:
         return '0 0 * * *';
     }

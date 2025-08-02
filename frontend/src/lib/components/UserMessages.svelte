@@ -5,8 +5,10 @@
   import { pocketbase } from '@lib/stores/pocketbase';
   import { fade } from 'svelte/transition';
 
-  let messages: any[] = [];
-  let unsubscribe: any;
+  import type { UserMessage } from '@lib/types/common';
+  
+  let messages: UserMessage[] = [];
+  let unsubscribe: (() => void) | null = null;
 
   async function fetchMessages() {
     try {

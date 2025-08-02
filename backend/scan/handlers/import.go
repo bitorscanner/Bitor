@@ -1,13 +1,13 @@
 package handlers
 
 import (
+	"bitor/services"
+	"bitor/services/notification"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
-	"bitor/services"
-	"bitor/services/notification"
 	"os"
 	"path/filepath"
 	"strconv"

@@ -73,14 +73,18 @@
 						`provider = "${provider.id}" && key_type = "access_key" && id != "${tempAccessKey.id}"`
 					);
 					await $pocketbase.collection('api_keys').delete(oldAccessKey.id);
-				} catch {}
+				} catch {
+					// Ignore error if old key doesn't exist
+				}
 
 				try {
 					const oldSecretKey = await $pocketbase.collection('api_keys').getFirstListItem(
 						`provider = "${provider.id}" && key_type = "secret_key" && id != "${tempSecretKey.id}"`
 					);
 					await $pocketbase.collection('api_keys').delete(oldSecretKey.id);
-				} catch {}
+				} catch {
+					// Ignore error if old key doesn't exist
+				}
 
 				onSave();
 				onClose();

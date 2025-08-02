@@ -1,6 +1,6 @@
 <script lang="ts">
   import { pocketbase } from '@lib/stores/pocketbase';
-  import { CheckCircleSolid, ExclamationCircleOutline, TrashBinOutline } from 'flowbite-svelte-icons';
+  import { CheckCircleSolid, ExclamationCircleSolid, ExclamationCircleOutline, TrashBinOutline } from 'flowbite-svelte-icons';
   import { Modal, Button } from 'flowbite-svelte';
   
   export let item;

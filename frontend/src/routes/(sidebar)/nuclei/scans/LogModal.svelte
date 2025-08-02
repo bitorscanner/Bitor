@@ -19,7 +19,7 @@
     };
   
     let terminalInstance: Terminal;
-    let fitAddon: any;
+    let fitAddon: { fit: () => void } | null;
     let unsubscribe: () => void;
     let lastLogCount = 0;
   

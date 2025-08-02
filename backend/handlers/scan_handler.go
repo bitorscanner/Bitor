@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"net/http"
 
+	"bitor/services/notification"
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/models"
-	"bitor/services/notification"
 )
 
 type ScanHandler struct {

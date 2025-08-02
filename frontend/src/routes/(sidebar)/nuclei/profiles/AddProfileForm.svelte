@@ -11,7 +11,12 @@
     let editorContainer: HTMLElement;
   
     export let open: boolean = false;
-    export let currentProfileData: Record<string, any> = { name: '', profile: '', raw_yaml: '' };
+    export let currentProfileData: {
+      name: string;
+      profile: string;
+      raw_yaml: string;
+      id?: string;
+    } = { name: '', profile: '', raw_yaml: '' };
     export let fetchProfiles: () => void;
   
     const dispatch = createEventDispatcher();

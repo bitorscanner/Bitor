@@ -1,6 +1,7 @@
 package services
 
 import (
+	"bitor/types"
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
@@ -8,7 +9,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"bitor/types"
 	"strings"
 	"time"
 )

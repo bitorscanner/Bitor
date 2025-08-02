@@ -33,7 +33,12 @@ export interface ScanData {
     api_key: string | null;
     favicon: string;
   };
-  ansible_logs?: any[];
+  ansible_logs?: Array<{
+    timestamp: string;
+    level: 'info' | 'warning' | 'error' | 'debug';
+    message: string;
+    task?: string;
+  }>;
   state_bucket?: string;
   scan_bucket?: string;
   ip_address?: string;

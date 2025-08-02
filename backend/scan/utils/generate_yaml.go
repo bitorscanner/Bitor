@@ -59,28 +59,28 @@ func getProviderKeys(app *pocketbase.PocketBase, provider *models.Record) (map[s
 				continue
 			}
 
-					// Store the decrypted key with its type
-		if provider.GetString("provider_type") == "s3" {
-			if keyType == "access_key" {
-				keys["access_key"] = string(decryptedBytes)
-				log.Printf("Successfully decrypted access key for provider %s", provider.Id)
-			} else if keyType == "secret_key" {
-				keys["secret_key"] = string(decryptedBytes)
-				log.Printf("Successfully decrypted secret key for provider %s", provider.Id)
+			// Store the decrypted key with its type
+			if provider.GetString("provider_type") == "s3" {
+				if keyType == "access_key" {
+					keys["access_key"] = string(decryptedBytes)
+					log.Printf("Successfully decrypted access key for provider %s", provider.Id)
+				} else if keyType == "secret_key" {
+					keys["secret_key"] = string(decryptedBytes)
+					log.Printf("Successfully decrypted secret key for provider %s", provider.Id)
+				}
+			} else if provider.GetString("provider_type") == "aws" {
+				if keyType == "access_key" {
+					keys["access_key"] = string(decryptedBytes)
+					log.Printf("Successfully decrypted access key for AWS provider %s", provider.Id)
+				} else if keyType == "secret_key" {
+					keys["secret_key"] = string(decryptedBytes)
+					log.Printf("Successfully decrypted secret key for AWS provider %s", provider.Id)
+				}
+			} else if provider.GetString("provider_type") == "digitalocean" {
+				// For DigitalOcean, we store the key as api_key regardless of key_type
+				keys["api_key"] = string(decryptedBytes)
+				log.Printf("Successfully decrypted API key for provider %s", provider.Id)
 			}
-		} else if provider.GetString("provider_type") == "aws" {
-			if keyType == "access_key" {
-				keys["access_key"] = string(decryptedBytes)
-				log.Printf("Successfully decrypted access key for AWS provider %s", provider.Id)
-			} else if keyType == "secret_key" {
-				keys["secret_key"] = string(decryptedBytes)
-				log.Printf("Successfully decrypted secret key for AWS provider %s", provider.Id)
-			}
-		} else if provider.GetString("provider_type") == "digitalocean" {
-			// For DigitalOcean, we store the key as api_key regardless of key_type
-			keys["api_key"] = string(decryptedBytes)
-			log.Printf("Successfully decrypted API key for provider %s", provider.Id)
-		}
 		}
 	}
 
@@ -161,7 +161,7 @@ func GenerateYAMLVars(app *pocketbase.PocketBase, scanID string) (string, error)
 
 	// Get preserve_vm setting from the scan record
 	preserveVM := record.GetBool("preserve_vm")
-	
+
 	// Start building YAML content with client info
 	yamlContent := fmt.Sprintf(`---
 scan_id: "%s"
@@ -587,7 +587,7 @@ s3:
 				if settingsMap != nil {
 					region, _ = settingsMap["region"].(string)
 					accountID, _ = settingsMap["account_id"].(string)
-					
+
 					// Handle tags properly
 					if tagsRaw, ok := settingsMap["tags"]; ok {
 						switch v := tagsRaw.(type) {

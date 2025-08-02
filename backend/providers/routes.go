@@ -1,10 +1,10 @@
 package providers
 
 import (
-	"fmt"
-	"net/http"
 	"bitor/providers/digitalocean"
 	"bitor/providers/s3"
+	"fmt"
+	"net/http"
 
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
@@ -217,13 +217,13 @@ func RegisterRoutes(app *pocketbase.PocketBase, router *echo.Group) {
 	providerGroup.POST("/s3/test", func(c echo.Context) error {
 		providerID := c.QueryParam("provider")
 		testPath := c.QueryParam("path")
-		
+
 		if providerID == "" {
 			return c.JSON(http.StatusBadRequest, map[string]string{
 				"error": "provider parameter is required",
 			})
 		}
-		
+
 		if testPath == "" {
 			return c.JSON(http.StatusBadRequest, map[string]string{
 				"error": "path parameter is required",
@@ -236,7 +236,7 @@ func RegisterRoutes(app *pocketbase.PocketBase, router *echo.Group) {
 				"error": err.Error(),
 			})
 		}
-		
+
 		return c.JSON(http.StatusOK, map[string]string{
 			"status":  "success",
 			"message": "S3 connection test passed successfully",
@@ -245,7 +245,7 @@ func RegisterRoutes(app *pocketbase.PocketBase, router *echo.Group) {
 
 	providerGroup.GET("/s3/validate", func(c echo.Context) error {
 		providerID := c.QueryParam("provider")
-		
+
 		if providerID == "" {
 			return c.JSON(http.StatusBadRequest, map[string]string{
 				"error": "provider parameter is required",
@@ -258,7 +258,7 @@ func RegisterRoutes(app *pocketbase.PocketBase, router *echo.Group) {
 				"error": err.Error(),
 			})
 		}
-		
+
 		return c.JSON(http.StatusOK, map[string]string{
 			"status":  "success",
 			"message": "S3 credentials are valid",

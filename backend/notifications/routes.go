@@ -1,15 +1,15 @@
 package notifications
 
 import (
+	"bitor/providers/jira"
+	"bitor/services"
+	"bitor/types"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"bitor/providers/jira"
-	"bitor/services"
-	"bitor/types"
 
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"

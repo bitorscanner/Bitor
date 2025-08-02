@@ -40,7 +40,12 @@
   
     interface ClientGroupEvent {
       detail: {
-        groupData: any;
+        groupData: {
+          id?: string;
+          name: string;
+          description?: string;
+          client_ids?: string[];
+        };
         selectedClients: Set<string>;
       }
     }
@@ -68,7 +73,14 @@
     let showClientGroupModal = false;
     let selectedClients = new Set<string>();
     let selectedGroupId = '';
-    let clientGroups: any[] = [];
+    let clientGroups: Array<{
+      id: string;
+      name: string;
+      description?: string;
+      client_ids?: string[];
+      created?: string;
+      updated?: string;
+    }> = [];
   
     // Reactive statement to check if at least one client is selected
     $: multipleClientsSelected = selectedClients.size >= 1;

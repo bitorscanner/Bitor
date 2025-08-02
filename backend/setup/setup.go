@@ -1,11 +1,11 @@
 package setup
 
 import (
+	"bitor/services/notification"
+	"bitor/utils/crypto"
 	"encoding/json"
 	"fmt"
 	"log"
-	"bitor/services/notification"
-	"bitor/utils/crypto"
 	"os"
 	"path/filepath"
 

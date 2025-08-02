@@ -1,12 +1,12 @@
 package notifications
 
 import (
-	"fmt"
-	"log"
-	"net/http"
 	"bitor/providers/jira"
 	"bitor/services"
 	"bitor/types"
+	"fmt"
+	"log"
+	"net/http"
 
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"

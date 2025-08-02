@@ -1,9 +1,6 @@
 package routes
 
 import (
-	"encoding/json"
-	"fmt"
-	"log"
 	"bitor/clients"
 	"bitor/findings"
 	"bitor/notifications"
@@ -19,6 +16,9 @@ import (
 	"bitor/templates"
 	"bitor/users"
 	"bitor/version"
+	"encoding/json"
+	"fmt"
+	"log"
 
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"

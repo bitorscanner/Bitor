@@ -17,7 +17,7 @@
   let menuPosition = { top: 0, left: 0 };
   let isEditorReady = false;
   let isLocalUpdate = false;
-  let updateTimeout: NodeJS.Timeout | null = null;
+  	let updateTimeout: number | null = null;
 
   let outsideClickListener: (event: MouseEvent) => void;
 

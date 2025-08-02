@@ -1,10 +1,10 @@
 package scan
 
 import (
-	"log"
 	"bitor/auth"
 	"bitor/scan/handlers"
 	"bitor/services/notification"
+	"log"
 
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"

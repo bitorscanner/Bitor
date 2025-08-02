@@ -1,7 +1,7 @@
 <script lang="ts">
     // Cast the imported MultiSelect to any so we can pass the appendToBody prop
     import { MultiSelect as OriginalMultiSelect } from 'flowbite-svelte';
-    const MultiSelect: any = OriginalMultiSelect;
+    const MultiSelect: typeof OriginalMultiSelect & { appendToBody?: boolean } = OriginalMultiSelect as any;
     import type { UseType } from './types';
   
     export let value: UseType[] = [];

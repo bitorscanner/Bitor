@@ -215,7 +215,7 @@
     fetchTemplates(currentLimit, true);
   }
 
-  let searchTimeout: NodeJS.Timeout;
+  		let searchTimeout: number;
   function handleSearch() {
     if (searchTimeout) {
       clearTimeout(searchTimeout);

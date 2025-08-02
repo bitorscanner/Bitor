@@ -1,9 +1,9 @@
 package aws
 
 import (
+	"bitor/utils/crypto"
 	"context"
 	"fmt"
-	"bitor/utils/crypto"
 	"sort"
 	"strings"
 
@@ -295,50 +295,50 @@ func FetchInstanceTypes(app *pocketbase.PocketBase, providerID string, region st
 	// Define the instance families we want to include (more comprehensive)
 	wantedFamilies := map[string]bool{
 		// Burstable instances
-		"t2": true,
-		"t3": true,
+		"t2":  true,
+		"t3":  true,
 		"t3a": true,
 		"t4g": true,
-		
+
 		// General purpose
-		"m5": true,
-		"m5a": true,
-		"m5n": true,
-		"m6a": true,
-		"m6i": true,
+		"m5":   true,
+		"m5a":  true,
+		"m5n":  true,
+		"m6a":  true,
+		"m6i":  true,
 		"m6in": true,
-		"m7a": true,
-		"m7i": true,
-		
+		"m7a":  true,
+		"m7i":  true,
+
 		// Compute optimized
-		"c5": true,
-		"c5a": true,
-		"c5n": true,
-		"c6a": true,
-		"c6i": true,
+		"c5":   true,
+		"c5a":  true,
+		"c5n":  true,
+		"c6a":  true,
+		"c6i":  true,
 		"c6in": true,
-		"c7a": true,
-		"c7i": true,
-		
+		"c7a":  true,
+		"c7i":  true,
+
 		// Memory optimized
-		"r5": true,
-		"r5a": true,
-		"r5b": true,
-		"r5n": true,
-		"r6a": true,
-		"r6i": true,
+		"r5":   true,
+		"r5a":  true,
+		"r5b":  true,
+		"r5n":  true,
+		"r6a":  true,
+		"r6i":  true,
 		"r6in": true,
-		"r7a": true,
-		"r7i": true,
-		
+		"r7a":  true,
+		"r7i":  true,
+
 		// Storage optimized
-		"i3": true,
+		"i3":   true,
 		"i3en": true,
-		"i4i": true,
-		"d3": true,
+		"i4i":  true,
+		"d3":   true,
 		"d3en": true,
 	}
-	
+
 	// Define the instance sizes we want to include
 	wantedSizes := map[string]bool{
 		"nano":    true,
@@ -358,7 +358,7 @@ func FetchInstanceTypes(app *pocketbase.PocketBase, providerID string, region st
 		"t3":  0.0104,
 		"t3a": 0.0094,
 		"t4g": 0.0084,
-		
+
 		// General purpose
 		"m5":   0.096,
 		"m5a":  0.086,
@@ -368,7 +368,7 @@ func FetchInstanceTypes(app *pocketbase.PocketBase, providerID string, region st
 		"m6in": 0.119,
 		"m7a":  0.081,
 		"m7i":  0.096,
-		
+
 		// Compute optimized
 		"c5":   0.085,
 		"c5a":  0.077,
@@ -378,7 +378,7 @@ func FetchInstanceTypes(app *pocketbase.PocketBase, providerID string, region st
 		"c6in": 0.108,
 		"c7a":  0.072,
 		"c7i":  0.085,
-		
+
 		// Memory optimized
 		"r5":   0.126,
 		"r5a":  0.113,
@@ -389,7 +389,7 @@ func FetchInstanceTypes(app *pocketbase.PocketBase, providerID string, region st
 		"r6in": 0.149,
 		"r7a":  0.101,
 		"r7i":  0.126,
-		
+
 		// Storage optimized
 		"i3":   0.156,
 		"i3en": 0.226,
@@ -441,12 +441,12 @@ func FetchInstanceTypes(app *pocketbase.PocketBase, providerID string, region st
 		basePrice := basePrices[family]
 		sizeMultiplier := sizeMultipliers[size]
 		price := basePrice * sizeMultiplier
-		
+
 		// If we don't have pricing data, use a default calculation
 		if basePrice == 0 || sizeMultiplier == 0 {
 			price = 0.05 // Default fallback price
 		}
-		
+
 		description := fmt.Sprintf("%s, %s - $%.3f/hour", vcpus, memory, price)
 
 		instanceTypes = append(instanceTypes, map[string]interface{}{

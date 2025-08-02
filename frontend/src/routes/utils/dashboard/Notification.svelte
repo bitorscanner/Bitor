@@ -1,8 +1,9 @@
 <script lang="ts">
+	import type { ComponentType } from 'svelte';
 	import IconAvatar from '../widgets/IconAvatar.svelte';
 
 	export let src: string = '';
-	export let icon: ConstructorOfATypedSvelteComponent | null = null;
+	export let icon: ComponentType | null = null;
 	export let when: string = '';
 	export let href: string = '';
 	export let color: IconAvatar['color'] = 'dark';

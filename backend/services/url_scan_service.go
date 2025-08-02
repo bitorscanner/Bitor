@@ -117,7 +117,7 @@ type HttpxOutput struct {
 	ResponseTime  string            `json:"response_time"`
 	Title         string            `json:"title,omitempty"`
 	Technologies  []string          `json:"tech,omitempty"`
-	Server        string            `json:"webserver,omitempty"`
+	Server        string            `json:"server,omitempty"`
 	ContentType   string            `json:"content_type,omitempty"`
 	Location      string            `json:"location,omitempty"`
 	FinalURL      string            `json:"final_url,omitempty"`

@@ -73,7 +73,7 @@ func createS3Config(ctx context.Context, accessKeyID, secretAccessKey, region, e
 	if err != nil {
 		return aws.Config{}, fmt.Errorf("failed to load AWS config: %w", err)
 	}
-	
+
 	// Override endpoint if provided
 	if endpoint != "" {
 		cfg.BaseEndpoint = aws.String(endpoint)
@@ -93,7 +93,7 @@ func TestS3Connection(app *pocketbase.PocketBase, providerID string, testPath st
 	// Parse provider settings
 	rawSettings := provider.Get("settings")
 	var settings map[string]interface{}
-	
+
 	// Handle different types of settings storage
 	switch v := rawSettings.(type) {
 	case map[string]interface{}:
@@ -109,22 +109,22 @@ func TestS3Connection(app *pocketbase.PocketBase, providerID string, testPath st
 	default:
 		return fmt.Errorf("provider settings are not properly configured (unsupported type: %T)", rawSettings)
 	}
-	
+
 	region, ok := settings["region"].(string)
 	if !ok || region == "" {
 		return fmt.Errorf("region not configured")
 	}
-	
+
 	endpoint, ok := settings["endpoint"].(string)
 	if !ok || endpoint == "" {
 		return fmt.Errorf("endpoint not configured")
 	}
-	
+
 	bucket, ok := settings["bucket"].(string)
 	if !ok || bucket == "" {
 		return fmt.Errorf("bucket not configured")
 	}
-	
+
 	usePathStyle, _ := settings["use_path_style"].(bool)
 
 	// Get credentials
@@ -158,7 +158,7 @@ func TestS3Connection(app *pocketbase.PocketBase, providerID string, testPath st
 	// Test 2: Create a test file in the specified path
 	testFileName := fmt.Sprintf("%s/test-file-%d.txt", strings.TrimPrefix(testPath, "/"), time.Now().Unix())
 	testContent := fmt.Sprintf("Test file created on %s", time.Now().Format(time.RFC3339))
-	
+
 	_, err = client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(testFileName),
@@ -200,7 +200,7 @@ func ValidateCredentials(app *pocketbase.PocketBase, providerID string) error {
 	// Parse provider settings
 	rawSettings := provider.Get("settings")
 	var settings map[string]interface{}
-	
+
 	// Handle different types of settings storage
 	switch v := rawSettings.(type) {
 	case map[string]interface{}:
@@ -216,17 +216,17 @@ func ValidateCredentials(app *pocketbase.PocketBase, providerID string) error {
 	default:
 		return fmt.Errorf("provider settings are not properly configured (unsupported type: %T)", rawSettings)
 	}
-	
+
 	region, ok := settings["region"].(string)
 	if !ok || region == "" {
 		return fmt.Errorf("region not configured")
 	}
-	
+
 	endpoint, ok := settings["endpoint"].(string)
 	if !ok || endpoint == "" {
 		return fmt.Errorf("endpoint not configured")
 	}
-	
+
 	usePathStyle, _ := settings["use_path_style"].(bool)
 
 	// Get credentials
@@ -256,4 +256,4 @@ func ValidateCredentials(app *pocketbase.PocketBase, providerID string) error {
 	}
 
 	return nil
-} 
+}

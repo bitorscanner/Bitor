@@ -1,14 +1,14 @@
 package users
 
 import (
+	"bitor/middleware"
+	"bitor/templates/email"
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
 	"log"
 	"net/http"
 	"net/mail"
-	"bitor/middleware"
-	"bitor/templates/email"
 	"time"
 
 	"github.com/labstack/echo/v5"

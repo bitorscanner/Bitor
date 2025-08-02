@@ -1,13 +1,13 @@
 package scan
 
 import (
+	"bitor/models"
+	"bitor/services"
+	"bitor/services/notification"
 	"context"
 	"fmt"
 	"log"
 	"net/http"
-	"bitor/models"
-	"bitor/services"
-	"bitor/services/notification"
 	"time"
 
 	"github.com/labstack/echo/v5"

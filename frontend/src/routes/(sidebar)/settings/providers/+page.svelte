@@ -89,7 +89,7 @@
 	let successMessage = '';
 	let showS3Modal = false;
 	let apiKeys: ApiKey[] = [];
-	let modalTimeout: NodeJS.Timeout;
+	let modalTimeout: number;
 	let success = '';
 	let editingName: string | null = null;
 	let showAddProviderModal = false;

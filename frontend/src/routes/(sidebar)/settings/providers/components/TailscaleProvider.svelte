@@ -8,7 +8,7 @@
     Textarea
   } from 'flowbite-svelte';
   import { pocketbase } from '@lib/stores/pocketbase';
-  import type { Provider } from '../types';
+  import type { Provider, TailscaleSettings } from '../types';
 
   export let provider: Provider;
   export let onSave: () => void;

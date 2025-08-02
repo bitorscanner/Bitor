@@ -1,14 +1,14 @@
 package handlers
 
 import (
+	"bitor/auth"
+	"bitor/clients/services"
 	"crypto/sha256"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"net/url"
-	"bitor/auth"
-	"bitor/clients/services"
 	"os"
 	"path/filepath"
 	"strings"
