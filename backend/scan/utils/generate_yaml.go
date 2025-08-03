@@ -732,7 +732,17 @@ vm:
 						vmConfig = strings.Replace(vmConfig, `do_size:`, fmt.Sprintf(`tags: "%s"
   do_size:`, tagString), 1)
 					}
-					yamlContent += vmConfig
+
+					// Add provider section for DigitalOcean
+					providerConfig := fmt.Sprintf(`
+provider:
+  name: "digitalocean"
+  region: "%s"
+  api_key: "%s"`,
+						region,
+						apiKey)
+
+					yamlContent += vmConfig + providerConfig
 				} else {
 					encryptedKey := out.String()
 					// Remove the "provider_key: " prefix from the encrypted output
@@ -755,7 +765,17 @@ vm:
 						vmConfig = strings.Replace(vmConfig, `do_size:`, fmt.Sprintf(`tags: "%s"
   do_size:`, tagString), 1)
 					}
-					yamlContent += vmConfig
+
+					// Add provider section for DigitalOcean
+					providerConfig := fmt.Sprintf(`
+provider:
+  name: "digitalocean"
+  region: "%s"
+  api_key: "%s"`,
+						region,
+						apiKey)
+
+					yamlContent += vmConfig + providerConfig
 				}
 			}
 		}

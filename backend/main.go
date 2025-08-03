@@ -31,7 +31,7 @@ import (
 	"bitor/version"
 )
 
-//go:embed pb_public
+//go:embed all:pb_public
 var distDir embed.FS
 var distDirFS, _ = fs.Sub(distDir, "pb_public")
 

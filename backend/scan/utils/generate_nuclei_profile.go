@@ -43,41 +43,96 @@ func GenerateNucleiProfileYAML(app *pocketbase.PocketBase, scanID string, filePa
 	}
 	log.Printf("Found expanded profile")
 
-	// Extract profile JSON blob
-	var profileJSON types.JsonRaw
+	// Extract profile data - check both 'profile' (JSON) and 'raw_yaml' (YAML) fields
+	var profileData []byte
+	var isYamlData bool
+
 	switch profile := expandedProfile.(type) {
 	case *models.Record:
 		log.Printf("Profile is a single record with ID: %s", profile.Id)
+
+		// First try the 'profile' field (for custom profiles - JSON format)
 		rawProfile := profile.Get("profile")
-		if rawProfile == nil {
-			log.Printf("Profile data is nil")
-			return fmt.Errorf("profile data is nil")
+		if rawProfile != nil {
+			if jsonData, ok := rawProfile.(types.JsonRaw); ok && len(jsonData) > 0 {
+				profileData = []byte(jsonData)
+				isYamlData = false
+				log.Printf("Using profile field data (JSON)")
+			}
 		}
-		profileJSON, ok = rawProfile.(types.JsonRaw)
-		if !ok {
-			log.Printf("Profile data is not JSON: %T", rawProfile)
-			return fmt.Errorf("profile data is not JSON")
+
+		// If profile field is empty, try 'raw_yaml' field (for default profiles - YAML format)
+		if len(profileData) == 0 {
+			rawYaml := profile.Get("raw_yaml")
+			if rawYaml != nil {
+				if yamlData, ok := rawYaml.(types.JsonRaw); ok && len(yamlData) > 0 {
+					// The raw_yaml field contains JSON-encoded YAML content, so we need to decode it
+					var yamlContent string
+					if err := json.Unmarshal(yamlData, &yamlContent); err != nil {
+						log.Printf("Failed to decode JSON-encoded YAML: %v", err)
+						// Fallback: treat as raw bytes
+						profileData = []byte(yamlData)
+					} else {
+						profileData = []byte(yamlContent)
+						log.Printf("Successfully decoded JSON-encoded YAML content")
+					}
+					isYamlData = true
+					log.Printf("Using raw_yaml field data (YAML)")
+				} else if yamlStr, ok := rawYaml.(string); ok && len(yamlStr) > 0 {
+					profileData = []byte(yamlStr)
+					isYamlData = true
+					log.Printf("Using raw_yaml string data (YAML)")
+				}
+			}
 		}
-		if len(profileJSON) == 0 {
-			log.Printf("Profile JSON is empty")
-			return fmt.Errorf("profile JSON is empty")
+
+		// Final validation
+		if len(profileData) == 0 {
+			log.Printf("Both profile and raw_yaml fields are empty")
+			return fmt.Errorf("both profile and raw_yaml fields are empty")
 		}
 	case []*models.Record:
 		log.Printf("Profile is a record array with length %d", len(profile))
 		if len(profile) > 0 {
+			// First try the 'profile' field (for custom profiles - JSON format)
 			rawProfile := profile[0].Get("profile")
-			if rawProfile == nil {
-				log.Printf("Profile data is nil")
-				return fmt.Errorf("profile data is nil")
+			if rawProfile != nil {
+				if jsonData, ok := rawProfile.(types.JsonRaw); ok && len(jsonData) > 0 {
+					profileData = []byte(jsonData)
+					isYamlData = false
+					log.Printf("Using profile field data from array (JSON)")
+				}
 			}
-			profileJSON, ok = rawProfile.(types.JsonRaw)
-			if !ok {
-				log.Printf("Profile data is not JSON: %T", rawProfile)
-				return fmt.Errorf("profile data is not JSON")
+
+			// If profile field is empty, try 'raw_yaml' field (for default profiles - YAML format)
+			if len(profileData) == 0 {
+				rawYaml := profile[0].Get("raw_yaml")
+				if rawYaml != nil {
+					if yamlData, ok := rawYaml.(types.JsonRaw); ok && len(yamlData) > 0 {
+						// The raw_yaml field contains JSON-encoded YAML content, so we need to decode it
+						var yamlContent string
+						if err := json.Unmarshal(yamlData, &yamlContent); err != nil {
+							log.Printf("Failed to decode JSON-encoded YAML from array: %v", err)
+							// Fallback: treat as raw bytes
+							profileData = []byte(yamlData)
+						} else {
+							profileData = []byte(yamlContent)
+							log.Printf("Successfully decoded JSON-encoded YAML content from array")
+						}
+						isYamlData = true
+						log.Printf("Using raw_yaml field data from array (YAML)")
+					} else if yamlStr, ok := rawYaml.(string); ok && len(yamlStr) > 0 {
+						profileData = []byte(yamlStr)
+						isYamlData = true
+						log.Printf("Using raw_yaml string data from array (YAML)")
+					}
+				}
 			}
-			if len(profileJSON) == 0 {
-				log.Printf("Profile JSON is empty")
-				return fmt.Errorf("profile JSON is empty")
+
+			// Final validation
+			if len(profileData) == 0 {
+				log.Printf("Both profile and raw_yaml fields are empty in array")
+				return fmt.Errorf("both profile and raw_yaml fields are empty")
 			}
 		} else {
 			log.Printf("Profile relation is empty")
@@ -87,22 +142,30 @@ func GenerateNucleiProfileYAML(app *pocketbase.PocketBase, scanID string, filePa
 		log.Printf("Unexpected profile type: %T", expandedProfile)
 		return fmt.Errorf("unexpected type for profile relation")
 	}
-	log.Printf("Raw profile data type: %T", profileJSON)
-	log.Printf("Extracted profile JSON length: %d", len(profileJSON))
-	log.Printf("Extracted profile JSON: %s", string(profileJSON))
+	log.Printf("Extracted profile data length: %d", len(profileData))
+	log.Printf("Profile data is YAML format: %v", isYamlData)
 
-	// Convert JSON to YAML
-	log.Printf("Converting JSON to YAML...")
-	yamlData, err := ConvertJSONToYAML(profileJSON)
-	if err != nil {
-		log.Printf("Failed to convert JSON to YAML: %v", err)
-		return fmt.Errorf("failed to convert JSON to YAML: %w", err)
+	// Process the data based on its format
+	var finalYamlData []byte
+	if isYamlData {
+		// Data is already in YAML format, use directly
+		log.Printf("Using raw YAML data directly")
+		finalYamlData = profileData
+	} else {
+		// Data is in JSON format, convert to YAML
+		log.Printf("Converting JSON to YAML...")
+		yamlData, err := ConvertJSONToYAML(profileData)
+		if err != nil {
+			log.Printf("Failed to convert JSON to YAML: %v", err)
+			return fmt.Errorf("failed to convert JSON to YAML: %w", err)
+		}
+		finalYamlData = yamlData
+		log.Printf("Successfully converted JSON to YAML")
 	}
-	log.Printf("Successfully converted to YAML")
 
 	// Save profile YAML to the specified file path
 	log.Printf("Writing YAML to file: %s", filePath)
-	if err := os.WriteFile(filePath, yamlData, 0644); err != nil {
+	if err := os.WriteFile(filePath, finalYamlData, 0644); err != nil {
 		log.Printf("Failed to write nuclei_profile.yaml: %v", err)
 		return fmt.Errorf("failed to write nuclei_profile.yaml: %w", err)
 	}

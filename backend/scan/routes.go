@@ -35,6 +35,7 @@ func RegisterRoutes(app *pocketbase.PocketBase, e *core.ServeEvent, ansibleBaseP
 	scanGroup.POST("/generate", handlers.HandleGenerateScan(app, ansibleBasePath))
 	scanGroup.POST("/destroy", handlers.HandleDestroyScan(app, ansibleBasePath))
 	scanGroup.POST("/update-status", handlers.HandleUpdateScanStatus(app))
+	scanGroup.POST("/update-progress", handlers.HandleUpdateScanProgress(app))
 	scanGroup.POST("/update-logs", handlers.HandleUpdateScanLogs(app))
 	scanGroup.POST("/update-archives", handlers.HandleUpdateNucleiScanArchives(app))
 	scanGroup.POST("/update-ip", handlers.HandleUpdateScanIP(app))

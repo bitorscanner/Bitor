@@ -129,7 +129,7 @@
       </Button>
     </div>
     
-    <div class="w-full max-w-md mx-auto">
+    <div class="w-full max-w-lg mx-auto">
       <!-- Tabs centered horizontally -->
       <Tabs class="w-full flex justify-center" style="default">
         <TabItem

@@ -20,6 +20,8 @@ export interface ScanData {
   start_time?: string;
   end_time?: string;
   progress?: number;
+  progress_message?: string;
+  progress_percentage?: number;
   vm_provider?: string;
   vm_provider_name?: string;
   nuclei_profile?: string;

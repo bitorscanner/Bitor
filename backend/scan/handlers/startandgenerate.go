@@ -204,6 +204,9 @@ func HandleStartAndGenerateScan(app *pocketbase.PocketBase, ansibleBasePath stri
 			log.Printf("Failed to send scan start notification: %v", err)
 		}
 
+		// Send initial progress update
+		sendProgressUpdate(scanReq.ScanID, "Initializing scan configuration...", 5)
+
 		// Generate YAML file for Ansible
 		yamlContent, err := utils.GenerateYAMLVars(app, scanReq.ScanID)
 		if err != nil {
@@ -222,6 +225,8 @@ func HandleStartAndGenerateScan(app *pocketbase.PocketBase, ansibleBasePath stri
 				"error": "Failed to generate YAML",
 			})
 		}
+
+		sendProgressUpdate(scanReq.ScanID, "Preparing scan files and directories...", 10)
 
 		// Define the paths using the scanID
 		scanDir := filepath.Join(ansibleBasePath, "scans", scanReq.ScanID)
@@ -255,6 +260,7 @@ func HandleStartAndGenerateScan(app *pocketbase.PocketBase, ansibleBasePath stri
 		}
 
 		// Create directories and files
+		sendProgressUpdate(scanReq.ScanID, "Creating scan configuration files...", 15)
 		if err := utils.SetupScanFiles(yamlContent, yamlFile, targetsFile, profileFile, logDir, app, scanReq.ScanID); err != nil {
 			// Update scan status to Failed using fresh record
 			if updateErr := updateScanStatus(app, scanReq.ScanID, "Failed"); updateErr != nil {
@@ -283,6 +289,7 @@ func HandleStartAndGenerateScan(app *pocketbase.PocketBase, ansibleBasePath stri
 		}
 
 		// First run generate.yml to create all necessary files
+		sendProgressUpdate(scanReq.ScanID, "Generating infrastructure templates...", 25)
 		log.Printf("Running generate.yml to create necessary files")
 		if err := utils.ExecuteAnsiblePlaybook(
 			generateYamlFile,
@@ -327,6 +334,7 @@ func HandleStartAndGenerateScan(app *pocketbase.PocketBase, ansibleBasePath stri
 		}
 
 		// Then run deploy.yml to start the scan
+		sendProgressUpdate(scanReq.ScanID, "Deploying infrastructure and starting scan...", 50)
 		log.Printf("Running deploy.yml to start the scan")
 		if err := utils.ExecuteAnsiblePlaybook(
 			deployPlaybookPath,
@@ -375,5 +383,35 @@ func HandleScanComplete(app *pocketbase.PocketBase) echo.HandlerFunc {
 		return c.JSON(http.StatusOK, map[string]string{
 			"status": "Scan removed from monitoring",
 		})
+	}
+}
+
+// sendProgressUpdate sends a progress update message for a scan
+func sendProgressUpdate(scanID, message string, progress int) {
+	payload := map[string]interface{}{
+		"scan_id": scanID,
+		"message": message,
+	}
+	if progress >= 0 && progress <= 100 {
+		payload["progress"] = progress
+	}
+
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		log.Printf("Failed to marshal progress payload: %v", err)
+		return
+	}
+
+	// Send to local API endpoint
+	resp, err := http.Post("http://localhost:8090/api/scan/update-progress",
+		"application/json", bytes.NewBuffer(payloadBytes))
+	if err != nil {
+		log.Printf("Failed to send progress update: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("Progress update failed with status: %d", resp.StatusCode)
 	}
 }

@@ -18,6 +18,23 @@
   roles:
     - { role: terraform }
   tasks:
+    - name: Send progress update - Infrastructure deployment started
+      uri:
+        url: "http://localhost:8090/api/scan/update-progress"
+        method: POST
+        headers:
+          Content-Type: "application/json"
+          Authorization: "Bearer {% raw %}{{ api_key }}{% endraw %}"
+        body: |
+          {
+            "scan_id": "{% raw %}{{ scan_id }}{% endraw %}",
+            "message": "Creating cloud infrastructure...",
+            "progress": 60
+          }
+        body_format: json
+        status_code: 200
+      ignore_errors: yes
+    
     - name: Set start time
       set_fact:
         start_time: "{% raw %}{{ ansible_date_time.iso8601[:19] }}{% endraw %}"
@@ -55,6 +72,23 @@
           }
         body_format: json
         status_code: 200
+
+    - name: Send progress update - Infrastructure created
+      uri:
+        url: "http://localhost:8090/api/scan/update-progress"
+        method: POST
+        headers:
+          Content-Type: "application/json"
+          Authorization: "Bearer {% raw %}{{ api_key }}{% endraw %}"
+        body: |
+          {
+            "scan_id": "{% raw %}{{ scan_id }}{% endraw %}",
+            "message": "Infrastructure created successfully, connecting to VM...",
+            "progress": 70
+          }
+        body_format: json
+        status_code: 200
+      ignore_errors: yes
 
 - name: Refresh Inventory
   hosts: localhost
@@ -153,6 +187,24 @@
   vars:
     ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o IdentitiesOnly=yes -o UserKnownHostsFile=/dev/null'
   tasks:
+    - name: Send progress update - Uploading nuclei scanner
+      uri:
+        url: "http://localhost:8090/api/scan/update-progress"
+        method: POST
+        headers:
+          Content-Type: "application/json"
+          Authorization: "Bearer {% raw %}{{ api_key }}{% endraw %}"
+        body: |
+          {
+            "scan_id": "{% raw %}{{ scan_id }}{% endraw %}",
+            "message": "Uploading nuclei scanner to VM...",
+            "progress": 80
+          }
+        body_format: json
+        status_code: 200
+      delegate_to: localhost
+      become: no
+      ignore_errors: yes
     - name: Upload Ansible Payload
       ansible.builtin.copy:
         src: {{ nuclei_package_folder_name }}
@@ -160,6 +212,24 @@
         directory_mode: true
         mode: '0700'
         owner: ansible
+    - name: Send progress update - Starting nuclei scan
+      uri:
+        url: "http://localhost:8090/api/scan/update-progress"
+        method: POST
+        headers:
+          Content-Type: "application/json"
+          Authorization: "Bearer {% raw %}{{ api_key }}{% endraw %}"
+        body: |
+          {
+            "scan_id": "{% raw %}{{ scan_id }}{% endraw %}",
+            "message": "Starting nuclei security scan...",
+            "progress": 90
+          }
+        body_format: json
+        status_code: 200
+      delegate_to: localhost
+      become: no
+      ignore_errors: yes
     - name: Run ansible and don't wait for it to complete
       shell: |
         script -q -f -c "ansible-playbook /tmp/{{ nuclei_package_folder_name }}/run.yml" /tmp/{{ nuclei_package_folder_name }}-logs.txt &

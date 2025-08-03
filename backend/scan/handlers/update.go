@@ -22,8 +22,9 @@ func HandleUpdateScanStatus(app *pocketbase.PocketBase) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		// Bind the request payload
 		var statusUpdate struct {
-			ScanID string `json:"scan_id"`
-			Status string `json:"status"`
+			ScanID  string `json:"scan_id"`
+			Status  string `json:"status"`
+			Message string `json:"message,omitempty"`
 		}
 		if err := c.Bind(&statusUpdate); err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]string{
@@ -48,6 +49,12 @@ func HandleUpdateScanStatus(app *pocketbase.PocketBase) echo.HandlerFunc {
 
 		// Update the scan status
 		record.Set("status", statusUpdate.Status)
+
+		// Update progress message if provided
+		if statusUpdate.Message != "" {
+			record.Set("progress_message", statusUpdate.Message)
+		}
+
 		if err := app.Dao().SaveRecord(record); err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{
 				"error": "Failed to update scan status",
@@ -56,6 +63,57 @@ func HandleUpdateScanStatus(app *pocketbase.PocketBase) echo.HandlerFunc {
 
 		return c.JSON(http.StatusOK, map[string]string{
 			"status": "Scan status updated",
+		})
+	}
+}
+
+func HandleUpdateScanProgress(app *pocketbase.PocketBase) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		// Bind the request payload
+		var progressUpdate struct {
+			ScanID   string `json:"scan_id"`
+			Message  string `json:"message"`
+			Progress int    `json:"progress,omitempty"` // 0-100 percentage
+		}
+		if err := c.Bind(&progressUpdate); err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{
+				"error": "Invalid request",
+			})
+		}
+
+		// Ensure scan ID and message are provided
+		if progressUpdate.ScanID == "" || progressUpdate.Message == "" {
+			return c.JSON(http.StatusBadRequest, map[string]string{
+				"error": "Scan ID and message are required",
+			})
+		}
+
+		// Find the scan record
+		record, err := app.Dao().FindRecordById("nuclei_scans", progressUpdate.ScanID)
+		if err != nil {
+			return c.JSON(http.StatusNotFound, map[string]string{
+				"error": "Scan not found",
+			})
+		}
+
+		// Update progress message
+		record.Set("progress_message", progressUpdate.Message)
+
+		// Update progress percentage if provided
+		if progressUpdate.Progress >= 0 && progressUpdate.Progress <= 100 {
+			record.Set("progress_percentage", progressUpdate.Progress)
+		}
+
+		if err := app.Dao().SaveRecord(record); err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{
+				"error": "Failed to update scan progress",
+			})
+		}
+
+		log.Printf("Scan %s progress: %s", progressUpdate.ScanID, progressUpdate.Message)
+
+		return c.JSON(http.StatusOK, map[string]string{
+			"status": "Scan progress updated",
 		})
 	}
 }

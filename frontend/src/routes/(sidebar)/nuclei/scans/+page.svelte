@@ -16,12 +16,18 @@
     import { goto } from '$app/navigation';
     import type { ScanData, ScanFormData, Client, Provider } from './types';
     import TerminalModal from './TerminalModal.svelte';
+    
+    // Extended scan data interface with progress fields
+    interface ExtendedScanData extends ScanData {
+        progress_message?: string;
+        progress_percentage?: number;
+    }
     import { SiDigitalocean, SiAmazon, SiAmazons3 } from '@icons-pack/svelte-simple-icons';
     import DestroyScan from './DestroyScan.svelte';
     import Archive from './Archive.svelte';
 
-    let scans: ScanData[] = [];
-    let filteredScans: ScanData[] = [];
+    let scans: ExtendedScanData[] = [];
+    let filteredScans: ExtendedScanData[] = [];
     let showAddScanModal = false;
     let showDeleteScanModal = false;
     let currentScanId = '';
@@ -29,7 +35,7 @@
     let currentScanData: Record<string, unknown> = {};
     let showStartScanModal = false;
     let showStopScanModal = false;
-    let currentScan: ScanData | null = null;
+    let currentScan: ExtendedScanData | null = null;
     let showLogModal = false;
     let userToken = $pocketbase.authStore.token;
     let showResultsModal = false;
@@ -54,7 +60,7 @@
     let currentPage = 1;
     let totalPages = 1;
     let itemsPerPage = 10;
-    let paginatedScans: ScanData[] = [];
+    let paginatedScans: ExtendedScanData[] = [];
 
     let modalMode: 'add' | 'edit' = 'add';
 
@@ -219,6 +225,8 @@
                 start_time_display: scan.start_time ? new Date(scan.start_time).toLocaleString() : 'N/A',
                 end_time_display: scan.end_time ? new Date(scan.end_time).toLocaleString() : 'N/A',
                 progress: scan.progress,
+                progress_message: scan.progress_message || '',
+                progress_percentage: scan.progress_percentage || 0,
                 vm_provider: scan.vm_provider,
                 vm_provider_name: scan.expand?.vm_provider?.name || 'N/A',
                 nuclei_profile: scan.nuclei_profile,
@@ -913,15 +921,26 @@
                     </TableBodyCell>
                     <TableBodyCell class="p-4">{scan.name}</TableBodyCell>
                     <TableBodyCell class="p-4">
-                        {#if scan.status}
-                            <StatusBadge 
-                                state={scan.status} 
-                                destroyed={scan.destroyed} 
-                                end_time={scan.end_time}
-                            />
-                        {:else}
-                            <span>Unknown Status</span>
-                        {/if}
+                        <div class="flex flex-col">
+                            {#if scan.status}
+                                <StatusBadge 
+                                    state={scan.status} 
+                                    destroyed={scan.destroyed} 
+                                    end_time={scan.end_time}
+                                />
+                                <!-- Show progress message for active scans -->
+                                {#if scan.progress_message && ['Generating', 'Deploying', 'Started'].includes(scan.status)}
+                                    <span class="text-xs text-gray-500 mt-1 italic">
+                                        {scan.progress_message}
+                                        {#if scan.progress_percentage && scan.progress_percentage > 0}
+                                            ({scan.progress_percentage}%)
+                                        {/if}
+                                    </span>
+                                {/if}
+                            {:else}
+                                <span>Unknown Status</span>
+                            {/if}
+                        </div>
                     </TableBodyCell>
                     <TableBodyCell class="p-4">
                         <div class="flex flex-col">
