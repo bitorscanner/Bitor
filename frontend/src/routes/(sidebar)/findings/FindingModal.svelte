@@ -237,14 +237,20 @@
   // Function to handle acknowledged toggle
   async function toggleAcknowledged() {
     if (finding) {
+      // Explicitly toggle the value to avoid race conditions
+      const newValue = !finding.acknowledged;
+      finding.acknowledged = newValue;
+      
       try {
         const updatedFinding = await $pocketbase.collection('nuclei_findings').update(finding.id, {
-          acknowledged: finding.acknowledged,
+          acknowledged: newValue,
         });
         console.log('Acknowledged status updated:', updatedFinding);
         saveMessage = 'Acknowledged status updated successfully';
       } catch (error) {
         console.error('Error updating acknowledged status:', error);
+        // Revert the change if the update fails
+        finding.acknowledged = !newValue;
         saveMessage = 'Error updating acknowledged status';
       }
     }
@@ -253,14 +259,20 @@
   // Function to handle false positive toggle
   async function toggleFalsePositive() {
     if (finding) {
+      // Explicitly toggle the value to avoid race conditions
+      const newValue = !finding.false_positive;
+      finding.false_positive = newValue;
+      
       try {
         const updatedFinding = await $pocketbase.collection('nuclei_findings').update(finding.id, {
-          false_positive: finding.false_positive,
+          false_positive: newValue,
         });
         console.log('False positive status updated:', updatedFinding);
         saveMessage = 'False positive status updated successfully';
       } catch (error) {
         console.error('Error updating false positive status:', error);
+        // Revert the change if the update fails
+        finding.false_positive = !newValue;
         saveMessage = 'Error updating false positive status';
       }
     }
@@ -269,15 +281,19 @@
   // Function to handle remediated toggle
   async function toggleRemediated() {
     if (finding) {
+      // Explicitly toggle the value to avoid race conditions
+      const newValue = !finding.remediated;
+      finding.remediated = newValue;
+      
       try {
         await $pocketbase.collection('nuclei_findings').update(finding.id, {
-          remediated: finding.remediated
+          remediated: newValue
         });
         dispatch('findingUpdated', finding);
       } catch (error) {
         console.error('Error updating remediated status:', error);
-        // Revert the toggle if the update fails
-        finding.remediated = !finding.remediated;
+        // Revert the change if the update fails
+        finding.remediated = !newValue;
       }
     }
   }
@@ -487,7 +503,7 @@
       {#if finding}
         <!-- Status Toggles -->
         <div class="flex gap-4 mb-6">
-          <Toggle bind:checked={finding.acknowledged} on:change={toggleAcknowledged}>
+          <Toggle checked={finding.acknowledged} on:change={toggleAcknowledged}>
             Acknowledged
             {#if finding.acknowledged}
               <div class="status-badge-container ml-2">
@@ -497,7 +513,7 @@
               </div>
             {/if}
           </Toggle>
-          <Toggle bind:checked={finding.false_positive} on:change={toggleFalsePositive}>
+          <Toggle checked={finding.false_positive} on:change={toggleFalsePositive}>
             False Positive
             {#if finding.false_positive}
               <div class="status-badge-container ml-2">
@@ -507,7 +523,7 @@
               </div>
             {/if}
           </Toggle>
-          <Toggle bind:checked={finding.remediated} on:change={toggleRemediated}>
+          <Toggle checked={finding.remediated} on:change={toggleRemediated}>
             Remediated
             {#if finding.remediated}
               <div class="status-badge-container ml-2">
