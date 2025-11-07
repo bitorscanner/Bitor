@@ -1,6 +1,7 @@
 package templates
 
 import (
+	"bitor/utils"
 	"fmt"
 	"log"
 	"net/http"
@@ -167,7 +168,14 @@ func ListTemplatesHandler(c echo.Context) error {
 		baseDir = filepath.Join(templatesBaseDir, publicTemplates)
 	}
 
-	fullPath := filepath.Join(baseDir, dir)
+	// Validate path to prevent directory traversal
+	fullPath, err := utils.ValidateSecurePath(baseDir, dir)
+	if err != nil {
+		log.Printf("Path validation failed for dir '%s': %v", dir, err)
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Invalid directory path",
+		})
+	}
 
 	entries, err := os.ReadDir(fullPath)
 	if err != nil {
@@ -208,7 +216,14 @@ func GetTemplateContentHandler(c echo.Context) error {
 		baseDir = filepath.Join(templatesBaseDir, publicTemplates)
 	}
 
-	fullPath := filepath.Join(baseDir, filePath)
+	// Validate path to prevent directory traversal
+	fullPath, err := utils.ValidateSecurePath(baseDir, filePath)
+	if err != nil {
+		log.Printf("Path validation failed for file '%s': %v", filePath, err)
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Invalid file path",
+		})
+	}
 
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
@@ -233,6 +248,13 @@ func SaveTemplateContentHandler(c echo.Context) error {
 		})
 	}
 
+	// Only allow modification of custom templates
+	if !request.IsCustom {
+		return c.JSON(http.StatusForbidden, map[string]string{
+			"error": "Public templates cannot be modified",
+		})
+	}
+
 	var baseDir string
 	if request.IsCustom {
 		baseDir = filepath.Join(templatesBaseDir, customTemplates)
@@ -240,7 +262,14 @@ func SaveTemplateContentHandler(c echo.Context) error {
 		baseDir = filepath.Join(templatesBaseDir, publicTemplates)
 	}
 
-	fullPath := filepath.Join(baseDir, request.Path)
+	// Validate path to prevent directory traversal
+	fullPath, err := utils.ValidateSecurePath(baseDir, request.Path)
+	if err != nil {
+		log.Printf("Path validation failed for file '%s': %v", request.Path, err)
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Invalid file path",
+		})
+	}
 
 	// Ensure the directory exists
 	dir := filepath.Dir(fullPath)
@@ -270,6 +299,13 @@ func ListAllTemplatesHandler(c echo.Context) error {
 		baseDir = filepath.Join(templatesBaseDir, customTemplates)
 	} else {
 		baseDir = filepath.Join(templatesBaseDir, publicTemplates)
+	}
+
+	// Validate that the base directory exists and is accessible
+	if _, err := os.Stat(baseDir); os.IsNotExist(err) {
+		return c.JSON(http.StatusNotFound, map[string]string{
+			"error": "Templates directory not found",
+		})
 	}
 
 	// Start recursive traversal from baseDir
@@ -338,6 +374,13 @@ func RenameTemplateHandler(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Old path and new name are required"})
 	}
 
+	// Only allow modification of custom templates
+	if !req.IsCustom {
+		return c.JSON(http.StatusForbidden, map[string]string{
+			"error": "Public templates cannot be modified",
+		})
+	}
+
 	// Determine base directory
 	var baseDir string
 	if req.IsCustom {
@@ -346,14 +389,29 @@ func RenameTemplateHandler(c echo.Context) error {
 		baseDir = filepath.Join(templatesBaseDir, publicTemplates)
 	}
 
-	// Sanitize paths to prevent directory traversal
-	cleanOldPath := filepath.Clean(req.OldPath)
-	cleanNewName := filepath.Clean(req.NewName)
+	// Validate the old path
+	oldFullPath, err := utils.ValidateSecurePath(baseDir, req.OldPath)
+	if err != nil {
+		log.Printf("Path validation failed for old path '%s': %v", req.OldPath, err)
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid old path"})
+	}
 
-	// Construct full paths
-	oldFullPath := filepath.Join(baseDir, cleanOldPath)
+	// Sanitize the new name to ensure it's just a filename without directory components
+	safeNewName, err := utils.SanitizeFilename(req.NewName)
+	if err != nil {
+		log.Printf("Filename sanitization failed for new name '%s': %v", req.NewName, err)
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid new name: must be a filename without directory separators"})
+	}
+
+	// Construct the new full path in the same directory as the old path
 	parentDir := filepath.Dir(oldFullPath)
-	newFullPath := filepath.Join(parentDir, cleanNewName)
+	newFullPath := filepath.Join(parentDir, safeNewName)
+
+	// Validate that the new path is still within the base directory
+	if _, err := utils.ValidateSecurePath(baseDir, filepath.Join(filepath.Dir(req.OldPath), safeNewName)); err != nil {
+		log.Printf("Path validation failed for new path: %v", err)
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid new path"})
+	}
 
 	// Check if the old file/directory exists
 	if _, err := os.Stat(oldFullPath); os.IsNotExist(err) {
@@ -398,6 +456,13 @@ func DeleteTemplateHandler(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Path is required"})
 	}
 
+	// Only allow deletion of custom templates
+	if !req.IsCustom {
+		return c.JSON(http.StatusForbidden, map[string]string{
+			"error": "Public templates cannot be deleted",
+		})
+	}
+
 	// Determine base directory
 	var baseDir string
 	if req.IsCustom {
@@ -406,16 +471,18 @@ func DeleteTemplateHandler(c echo.Context) error {
 		baseDir = filepath.Join(templatesBaseDir, publicTemplates)
 	}
 
-	// Sanitize path to prevent directory traversal
-	cleanPath := filepath.Clean(req.Path)
+	// Validate path to prevent directory traversal
+	fullPath, err := utils.ValidateSecurePath(baseDir, req.Path)
+	if err != nil {
+		log.Printf("Path validation failed for path '%s': %v", req.Path, err)
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid path"})
+	}
 
 	// Prevent deletion of root directories
+	cleanPath := filepath.Clean(req.Path)
 	if cleanPath == "." || cleanPath == "/" {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Cannot delete root directory"})
 	}
-
-	// Construct full path
-	fullPath := filepath.Join(baseDir, cleanPath)
 
 	// Check if the file/directory exists
 	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
@@ -423,7 +490,7 @@ func DeleteTemplateHandler(c echo.Context) error {
 	}
 
 	// Remove the file or directory
-	err := os.RemoveAll(fullPath)
+	err = os.RemoveAll(fullPath)
 	if err != nil {
 		log.Println("Error deleting file or directory:", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to delete file or directory"})

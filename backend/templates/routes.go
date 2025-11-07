@@ -1,7 +1,8 @@
 package templates
 
 import (
-	"bitor/auth" // Adjust the import path as necessary
+	"bitor/auth"       // Adjust the import path as necessary
+	"bitor/middleware" // Import the middleware package for permission checks
 
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
@@ -19,12 +20,16 @@ func RegisterRoutes(app *pocketbase.PocketBase, e *core.ServeEvent) {
 		apis.ActivityLogger(app),      // Optional: log activities
 	)
 
-	// Register templates routes within the group
-	templatesGroup.GET("", ListTemplatesHandler)  // Matches /api/templates
-	templatesGroup.GET("/", ListTemplatesHandler) // Matches /api/templates/
-	templatesGroup.GET("/content", GetTemplateContentHandler)
-	templatesGroup.POST("/content", SaveTemplateContentHandler)
-	templatesGroup.GET("/all", ListAllTemplatesHandler)   // Matches /api/templates/all - Used by template file browser
-	templatesGroup.POST("/rename", RenameTemplateHandler) // Matches /api/templates/rename
-	templatesGroup.POST("/delete", DeleteTemplateHandler) // Matches /api/templates/delete
+	// Register read-only routes (require read permission)
+	templatesGroup.GET("", ListTemplatesHandler, middleware.RequirePermission(app, "read", "templates"))
+	templatesGroup.GET("/", ListTemplatesHandler, middleware.RequirePermission(app, "read", "templates"))
+	templatesGroup.GET("/content", GetTemplateContentHandler, middleware.RequirePermission(app, "read", "templates"))
+	templatesGroup.GET("/all", ListAllTemplatesHandler, middleware.RequirePermission(app, "read", "templates"))
+
+	// Register write routes (require write permission)
+	templatesGroup.POST("/content", SaveTemplateContentHandler, middleware.RequirePermission(app, "write", "templates"))
+	templatesGroup.POST("/rename", RenameTemplateHandler, middleware.RequirePermission(app, "write", "templates"))
+
+	// Register delete routes (require delete permission)
+	templatesGroup.POST("/delete", DeleteTemplateHandler, middleware.RequirePermission(app, "delete", "templates"))
 }

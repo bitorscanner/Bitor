@@ -9,11 +9,6 @@
       AccordionItem,
       Skeleton,
       Checkbox,
-      MultiSelect,
-      Input,
-      Select,
-      Label,
-      Alert,
       Toast,
       Dropdown,
       DropdownItem,
@@ -105,12 +100,7 @@
     // User filter dropdown state
     let userFilterValue = showMyFindingsOnly ? 'mine' : 'all';
     
-    // Function to handle user filter dropdown changes
-    function handleUserFilterChange() {
-      // Non-admins can now see all findings if they choose
-      showMyFindingsOnly = userFilterValue === 'mine';
-      applyFilters();
-    }
+
   
     // Current user ID for filtering
     let currentUserId = $pocketbase.authStore.model?.id ?? '';
@@ -389,19 +379,7 @@
       }
     }
   
-    function initializeSelections(data: APIResponse) {
-      return data && data.items && Array.isArray(data.items) 
-        ? data.items.map((group: GroupedFindings) => ({
-            ...group,
-            selected: false,
-            indeterminate: false,
-            findings: group.findings.map((finding: Finding) => ({
-              ...finding,
-              selected: false,
-            })),
-          }))
-        : [];
-    }
+
   
     function openModal(finding: Finding) {
       selectedFinding = finding;
@@ -648,8 +626,7 @@
       }
     }
 
-    let falsePositiveFilter: boolean = false;
-    let acknowledgedFilter: boolean = false;
+
 
     // Status options - removed duplicate statusFilter declaration
     const statusOptions = [

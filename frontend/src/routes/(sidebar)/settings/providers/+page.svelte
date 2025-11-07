@@ -1,9 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { pocketbase } from '@lib/stores/pocketbase';
-	import { page } from '$app/stores';
 	import { 
-		Card, 
 		Table, 
 		TableBody, 
 		TableBodyCell, 
@@ -12,26 +10,12 @@
 		TableHeadCell, 
 		Toggle, 
 		Button, 
-		Dropdown, 
-		DropdownItem, 
-		Select, 
-		Label, 
 		Input, 
 		Badge,
-		Button as BadgeButton,
-		MultiSelect,
 		Modal,
-		Toast,
-		Alert,
-		Accordion,
-		AccordionItem
+		Alert
 	} from 'flowbite-svelte';
 	import { 
-		ArrowDownOutline,
-		ArrowUpOutline,
-		CheckCircleSolid,
-		ExclamationCircleSolid,
-		PenSolid,
 		TrashBinSolid,
 		CloudArrowUpSolid,
 		SearchSolid,
@@ -53,9 +37,8 @@
 		SiIntel,
 		SiTailscale
 	} from '@icons-pack/svelte-simple-icons';
-	import type { ComponentType, SvelteComponent } from 'svelte';
-	import type { RecordModel } from 'pocketbase';
-	import type { Provider, ProviderType, ApiKey, JiraSettings, DiscoveryServiceType, AIProviderType } from './types';
+
+	import type { Provider, ProviderType, JiraSettings, DiscoveryServiceType, AIProviderType } from './types';
 	import { DISCOVERY_SERVICES, AI_SERVICES } from './types';
 	import UseMultiSelect from './UseMultiSelect.svelte';
 	import AWSProvider from './components/AWSProvider.svelte';
@@ -68,28 +51,14 @@
 	import AIProvider from './components/AIProvider.svelte';
 	import TailscaleProvider from './components/TailscaleProvider.svelte';
 
-	interface ProviderApiKeys {
-		[key: string]: ApiKey[];
-	}
+
 
 	let providers: Provider[] = [];
-	let sortField: keyof Provider = 'name';
-	let sortDirection: 'asc' | 'desc' = 'asc';
 	let expandedProvider: string | null = null;
-	let showApiKeyModal = false;
-	let showSmtpModal = false;
 	let showDeleteModal = false;
-	let showEditModal = false;
 	let selectedProvider: Provider | null = null;
-	let providerApiKeys: ProviderApiKeys = {};
-	let dropdownTriggers: Record<string, HTMLElement> = {};
 	let loading = false;
 	let error = '';
-	let showSuccessToast = false;
-	let successMessage = '';
-	let showS3Modal = false;
-	let apiKeys: ApiKey[] = [];
-	let modalTimeout: number;
 	let success = '';
 	let editingName: string | null = null;
 	let showAddProviderModal = false;
@@ -110,19 +79,7 @@
 		description: info.description as string
 	}));
 
-	function createProvider(type: ProviderType): Provider {
-		const uses = ['email', 'slack', 'teams', 'discord', 'telegram', 'jira'].includes(type) 
-			? ['notification'] 
-			: [];
-			
-		return {
-			provider_type: type,
-			name: `New ${type} Provider`,
-			enabled: true,
-			uses,
-			settings: {}
-		} as Provider;
-	}
+
 
 	async function loadProviders() {
 		try {
@@ -421,10 +378,7 @@
 		}
 	}
 
-	function getInputValue(providerId: string): string {
-		const input = document.getElementById(`name-${providerId}`) as HTMLInputElement;
-		return input?.value || '';
-	}
+
 
 	function toggleExpand(providerId: string | undefined) {
 		if (!providerId) return;

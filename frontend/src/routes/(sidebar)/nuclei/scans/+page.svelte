@@ -1,8 +1,8 @@
 <script lang="ts">
-    import { Breadcrumb, BreadcrumbItem, Heading, Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell, Checkbox, Button, Pagination } from 'flowbite-svelte';
+    import { Breadcrumb, BreadcrumbItem, Heading, Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell, Checkbox, Button } from 'flowbite-svelte';
     import ScanForm from './ScanForm.svelte';
     import Delete from './Delete.svelte';
-    import { onMount, onDestroy } from 'svelte';
+    import { onMount } from 'svelte';
     import MetaTag from '@utils/MetaTag.svelte';
     import { pocketbase } from '@lib/stores/pocketbase';
     import StartScan from './StartScan.svelte';
@@ -13,7 +13,7 @@
     import ResultsModal from './ResultsModal.svelte';
     import ManualScanModal from './ManualScanModal.svelte';
     import ScanFilters from './ScanFilters.svelte';
-    import { goto } from '$app/navigation';
+
     import type { ScanData, ScanFormData, Client, Provider } from './types';
     import TerminalModal from './TerminalModal.svelte';
     
@@ -27,12 +27,9 @@
     import Archive from './Archive.svelte';
 
     let scans: ExtendedScanData[] = [];
-    let filteredScans: ExtendedScanData[] = [];
     let showAddScanModal = false;
     let showDeleteScanModal = false;
     let currentScanId = '';
-    let selectedScanId = '';
-    let currentScanData: Record<string, unknown> = {};
     let showStartScanModal = false;
     let showStopScanModal = false;
     let currentScan: ExtendedScanData | null = null;
@@ -40,7 +37,7 @@
     let userToken = $pocketbase.authStore.token;
     let showResultsModal = false;
     let showManualScanModal = false;
-    	let intervalId: number;
+    
     let showTerminalModal = false;
     let showDestroyModal = false;
     let showArchiveModal = false;
@@ -62,7 +59,7 @@
     let itemsPerPage = 10;
     let paginatedScans: ExtendedScanData[] = [];
 
-    let modalMode: 'add' | 'edit' = 'add';
+
 
     // Add after other state variables
     let selectedScans: string[] = [];

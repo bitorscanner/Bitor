@@ -2,9 +2,17 @@
 
 > 🔄 **Important Notice**: We are rebranding from "Orbit" to "Bitor". This change comes following a cease and desist request from a company claiming rights to the "Orbit" name, despite not holding a registered trademark. While we believe in our right to the name, we've chosen to redirect our resources toward building great software rather than engaging in costly legal proceedings. The functionality and quality of our software remain unchanged - only the name is different.
 > 
-> ⏳ **Transition Period**: We are in the process of updating all instances of the name across our codebase, documentation, and infrastructure. This transition will take place over the next 30 days. During this time, you may still see references to "Orbit" in various places. We appreciate your patience and understanding during this transition.
 
 > ⚠️ **Note**: This software is currently in beta and under heavy development. Features and APIs may change frequently.
+
+> 🔒 **Security Notice**: This software has **not** undergone a comprehensive security audit and is **not designed for public internet exposure**. It is intended for use in **private, trusted networks only** (e.g., behind a VPN, internal network, or with proper network segmentation). As beta software under active development, **there may be security vulnerabilities**. While we actively address reported security issues, use at your own risk. For production deployments, we strongly recommend:
+> - Deploy behind a firewall or VPN
+> - Use strong authentication
+> - Keep the software updated
+> - Monitor access logs
+> - Follow the principle of least privilege
+> 
+> See our [Security Policy](SECURITY.md) for reporting vulnerabilities.
 
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/bitorscanner/bitor)](https://github.com/bitorscanner/bitor/releases)
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/bitorscanner/bitor/release.yml?branch=main)](https://github.com/bitorscanner/bitor/actions)

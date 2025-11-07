@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.6]
+
+### Security
+- **CRITICAL**: Fixed path traversal vulnerability in template management system (CVE-2025-PATH-TRAVERSAL)
+  - Added secure path validation to prevent directory traversal attacks
+  - Implemented filename sanitization to block malicious file operations
+  - Added permission-based access control for template operations
+  - Protected public templates from unauthorized modifications
+  - See [security advisory](./docs/security/CVE-2025-PATH-TRAVERSAL.md) for full details
+  - Credit: chimmeee for responsible disclosure
+
+### Added
+- Added comprehensive path validation utilities (`backend/utils/path_validator.go`)
+- Added 25 unit tests for path validation and sanitization
+- Added permission middleware for template read/write/delete operations
+- Added public template protection (read-only enforcement)
+
+### Changed
+- Updated all template handlers with secure path validation
+- Enhanced permission middleware to properly detect admin users via context
+- Improved error messages for path validation failures
+
 ## [0.5.5] - 2024-05-01
 
 ### Added

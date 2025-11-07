@@ -7,6 +7,7 @@ import (
 
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
+	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/models"
 	"github.com/pocketbase/pocketbase/tools/types"
 )
@@ -15,23 +16,35 @@ import (
 func RequirePermission(app *pocketbase.PocketBase, action string, collection string) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			// Get the token from the Authorization header
-			authHeader := c.Request().Header.Get("Authorization")
-			if !strings.HasPrefix(authHeader, "Bearer ") {
-				return echo.NewHTTPError(http.StatusUnauthorized, "Invalid authorization header")
-			}
-			token := strings.TrimPrefix(authHeader, "Bearer ")
-
-			// Skip for admin users
-			admin, _ := app.Dao().FindAdminByToken(token, app.Settings().RecordAuthToken.Secret)
+			// Check if admin is already authenticated in context (set by LoadAuthContext)
+			admin, _ := c.Get(apis.ContextAdminKey).(*models.Admin)
 			if admin != nil {
+				// Admins bypass all permission checks
 				return next(c)
 			}
 
-			// Get authenticated user
-			record, err := app.Dao().FindAuthRecordByToken(token, app.Settings().RecordAuthToken.Secret)
-			if err != nil {
-				return echo.NewHTTPError(http.StatusUnauthorized, "Unauthorized")
+			// Check if user is already authenticated in context (set by LoadAuthContext)
+			record, _ := c.Get(apis.ContextAuthRecordKey).(*models.Record)
+			if record == nil {
+				// If not in context, try to get from token
+				authHeader := c.Request().Header.Get("Authorization")
+				if !strings.HasPrefix(authHeader, "Bearer ") {
+					return echo.NewHTTPError(http.StatusUnauthorized, "Invalid authorization header")
+				}
+				token := strings.TrimPrefix(authHeader, "Bearer ")
+
+				// Try admin token first
+				admin, _ := app.Dao().FindAdminByToken(token, app.Settings().RecordAuthToken.Secret)
+				if admin != nil {
+					return next(c)
+				}
+
+				// Try user token
+				var err error
+				record, err = app.Dao().FindAuthRecordByToken(token, app.Settings().RecordAuthToken.Secret)
+				if err != nil {
+					return echo.NewHTTPError(http.StatusUnauthorized, "Unauthorized")
+				}
 			}
 
 			// Get user's group
